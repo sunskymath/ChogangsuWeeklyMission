@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>김초강 학습 리포트 — 매일의수학</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1D1C33;
+    --ink-soft:#514E72;
+    --paper:#F4F4FB;
+    --surface:#FFFFFF;
+    --line:#E4E2F1;
+    --blue:#33499E;
+    --blue-fill:#3A55C7;
+    --blue-soft:#E9ECFB;
+    --violet:#5B3E9E;
+    --violet-fill:#6C48B8;
+    --violet-soft:#EFE8FA;
+    --warm:#6B6553;
+    --warm-soft:#EFEAE0;
+    --radius:16px;
+    --font-display:'Gowun Batang', 'Nanum Myeongjo', serif;
+    --font-body:'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    display:flex;
+    justify-content:center;
+    padding:40px 16px 64px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .sheet{
+    width:100%;
+    max-width:820px;
+    background:var(--surface);
+    border-radius:24px;
+    border:1px solid var(--line);
+    box-shadow:0 24px 60px -32px rgba(29,28,51,0.35);
+    overflow:hidden;
+  }
+
+  /* ---------- header ---------- */
+  .header{
+    position:relative;
+    padding:38px 40px 30px;
+    background:linear-gradient(120deg, var(--blue-fill) 0%, var(--violet-fill) 100%);
+    color:#fff;
+    overflow:hidden;
+  }
+  .header-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    position:relative;
+    z-index:2;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family:var(--font-body);
+    font-size:13px;
+    letter-spacing:0.06em;
+    opacity:0.92;
+  }
+  .brand .dot{ width:6px; height:6px; border-radius:50%; background:#fff; opacity:0.8; }
+  .badge{
+    font-size:12px;
+    letter-spacing:0.04em;
+    background:rgba(255,255,255,0.18);
+    border:1px solid rgba(255,255,255,0.35);
+    padding:5px 12px;
+    border-radius:100px;
+    white-space:nowrap;
+  }
+  .header h1{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:30px;
+    line-height:1.35;
+    margin:20px 0 6px;
+    text-wrap:balance;
+    position:relative;
+    z-index:2;
+  }
+  .header p.sub{
+    margin:0;
+    font-size:14px;
+    color:rgba(255,255,255,0.85);
+    position:relative;
+    z-index:2;
+  }
+  .graph-motif{
+    position:absolute;
+    right:0;
+    top:0;
+    width:320px;
+    height:100%;
+    opacity:0.22;
+    z-index:1;
+    pointer-events:none;
+  }
+
+  .meta-row{
+    margin-top:26px;
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:10px;
+    position:relative;
+    z-index:2;
+  }
+  .meta-item{
+    background:rgba(255,255,255,0.14);
+    border:1px solid rgba(255,255,255,0.28);
+    border-radius:12px;
+    padding:10px 12px;
+  }
+  .meta-item .k{ font-size:11px; color:rgba(255,255,255,0.78); margin:0 0 3px; }
+  .meta-item .v{ font-size:14.5px; font-weight:600; margin:0; }
+
+  /* ---------- stepper ---------- */
+  .stepper{
+    display:flex;
+    align-items:center;
+    gap:0;
+    padding:22px 40px 4px;
+  }
+  .step{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex:1;
+  }
+  .step .bubble{
+    width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:600;
+    background:var(--blue-soft); color:var(--blue);
+    border:1.5px solid var(--blue);
+    flex-shrink:0;
+  }
+  .step.active .bubble{ background:var(--blue); color:#fff; }
+  .step .label{ font-size:13px; color:var(--ink-soft); }
+  .step.active .label{ color:var(--ink); font-weight:600; }
+  .step-line{
+    flex:1;
+    height:1.5px;
+    background:var(--line);
+    margin:0 4px;
+  }
+
+  /* ---------- body ---------- */
+  .body{ padding:10px 40px 34px; }
+
+  .student-line{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    margin:18px 0 24px;
+    padding-bottom:16px;
+    border-bottom:1px solid var(--line);
+  }
+  .student-line .name{
+    font-family:var(--font-display);
+    font-size:22px;
+    font-weight:700;
+  }
+  .student-line .unit-tag{
+    font-size:12.5px;
+    color:var(--violet);
+    background:var(--violet-soft);
+    padding:4px 10px;
+    border-radius:100px;
+    font-weight:600;
+  }
+
+  .card-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px 20px 18px;
+  }
+  .card.accent-blue{ background:var(--blue-soft); border-color:transparent; }
+  .card.accent-violet{ background:var(--violet-soft); border-color:transparent; }
+  .card.accent-warm{ background:var(--warm-soft); border-color:transparent; }
+
+  .card-head{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    margin-bottom:10px;
+  }
+  .card-head .icon{
+    width:30px; height:30px;
+    border-radius:9px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .accent-blue .icon{ background:var(--blue); color:#fff; }
+  .accent-violet .icon{ background:var(--violet); color:#fff; }
+  .accent-warm .icon{ background:var(--warm); color:#fff; }
+
+  .card-head .title{
+    font-size:14.5px;
+    font-weight:600;
+  }
+  .accent-blue .title{ color:var(--blue); }
+  .accent-violet .title{ color:var(--violet); }
+  .accent-warm .title{ color:var(--warm); }
+
+  .card p.body-text{
+    margin:0;
+    font-size:15.5px;
+    line-height:1.65;
+    color:var(--ink);
+  }
+
+  .full-row{ grid-column:1 / -1; }
+
+  .assignment{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--surface);
+    border:1.5px dashed var(--line);
+    border-radius:12px;
+    padding:14px 16px;
+    margin-top:12px;
+  }
+  .assignment .check{
+    width:20px; height:20px;
+    border-radius:6px;
+    border:1.5px solid var(--blue);
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--blue);
+  }
+  .assignment .txt{ font-size:14.5px; font-weight:500; }
+  .assignment .txt .sub{ display:block; font-size:12px; color:var(--ink-soft); font-weight:400; margin-top:2px; }
+
+  /* ---------- footer ---------- */
+  .footer{
+    padding:22px 40px 30px;
+    border-top:1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:16px;
+  }
+  .footer .note{ font-size:12.5px; color:var(--ink-soft); line-height:1.6; }
+  .signature{ text-align:right; }
+  .signature .name{
+    font-family:var(--font-display);
+    font-size:18px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .signature .role{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .signature .underline{
+    width:96px; height:2px;
+    background:linear-gradient(90deg, var(--blue-fill), var(--violet-fill));
+    margin:6px 0 0 auto;
+    border-radius:2px;
+  }
+
+  .print-bar{
+    max-width:820px;
+    width:100%;
+    display:flex;
+    justify-content:flex-end;
+    margin:0 auto 14px;
+  }
+  .print-btn{
+    font-family:var(--font-body);
+    font-size:13.5px;
+    font-weight:500;
+    color:var(--blue);
+    background:var(--surface);
+    border:1px solid var(--line);
+    padding:9px 16px;
+    border-radius:100px;
+    cursor:pointer;
+    display:flex; align-items:center; gap:6px;
+  }
+  .print-btn:hover{ border-color:var(--blue); }
+
+  @media (max-width:640px){
+    body{ padding:20px 10px 40px; }
+    .header{ padding:28px 22px 24px; }
+    .header h1{ font-size:24px; }
+    .meta-row{ grid-template-columns:1fr 1fr; }
+    .body{ padding:6px 22px 26px; }
+    .card-grid{ grid-template-columns:1fr; }
+    .footer{ padding:20px 22px 24px; flex-direction:column; align-items:flex-start; }
+    .signature{ text-align:left; }
+    .signature .underline{ margin:6px 0 0 0; }
+    .graph-motif{ width:130px; height:110px; }
+    .stepper{ padding:18px 22px 4px; }
+    .step .label{ font-size:11.5px; }
+  }
+
+  @media print{
+    @page{ size:A4; margin:12mm; }
+    body{ padding:0; background:#fff; }
+    .sheet{ box-shadow:none; border:none; border-radius:0; max-width:100%; }
+    .print-bar{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar no-print">
+  <button class="print-btn" onclick="window.print()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    인쇄 / PDF로 저장
+  </button>
+</div>
+
+<main class="sheet">
+
+  <header class="header">
+    <svg class="graph-motif" viewBox="0 0 200 160" fill="none" preserveAspectRatio="none">
+      <path d="M10 150 L190 150" stroke="rgba(255,255,255,0.35)" stroke-width="1"/>
+      <path d="M20 10 L20 150" stroke="rgba(255,255,255,0.35)" stroke-width="1"/>
+      <path d="M20 140 C 70 20, 110 20, 185 135" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="63" cy="55" r="4" fill="#fff"/>
+      <circle cx="150" cy="95" r="4" fill="#fff"/>
+      <text x="160" y="88" fill="rgba(255,255,255,0.8)" font-size="10" font-family="IBM Plex Sans KR, sans-serif">f(x)</text>
+    </svg>
+
+    <div class="header-top">
+      <div class="brand"><span>매일의수학</span><span class="dot"></span><span>확통 학습 리포트</span></div>
+      <div class="badge">2026. 09. 셋째 주</div>
+    </div>
+    <h1>함수 단원, 이번 주 학습을 정리했어요</h1>
+    <p class="sub">학부모님께 전해드리는 주간 학습 요약입니다.</p>
+
+    <div class="meta-row">
+      <div class="meta-item"><p class="k">학생</p><p class="v">김초강</p></div>
+      <div class="meta-item"><p class="k">학습 단원</p><p class="v">함수</p></div>
+      <div class="meta-item"><p class="k">담당 선생님</p><p class="v">정재호 T</p></div>
+      <div class="meta-item"><p class="k">과목</p><p class="v">확통</p></div>
+    </div>
+  </header>
+
+  <div class="stepper">
+    <div class="step active">
+      <div class="bubble">1</div>
+      <div class="label">이번 주 확인</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="bubble">2</div>
+      <div class="label">다음 목표</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="bubble">3</div>
+      <div class="label">과제 수행</div>
+    </div>
+  </div>
+
+  <section class="body">
+    <div class="student-line">
+      <span class="name">김초강</span>
+      <span class="unit-tag">함수 단원</span>
+    </div>
+
+    <div class="card-grid">
+      <div class="card accent-blue">
+        <div class="card-head">
+          <span class="icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <span class="title">잘한 점</span>
+        </div>
+        <p class="body-text">그래프의 변화를 빠르게 파악함</p>
+      </div>
+
+      <div class="card accent-warm">
+        <div class="card-head">
+          <span class="icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r="0.6" fill="currentColor" stroke="none"/></svg>
+          </span>
+          <span class="title">보완할 점</span>
+        </div>
+        <p class="body-text">계산 과정에서 부호 실수가 있음</p>
+      </div>
+
+      <div class="card accent-violet full-row">
+        <div class="card-head">
+          <span class="icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.8" fill="currentColor" stroke="none"/></svg>
+          </span>
+          <span class="title">다음 목표</span>
+        </div>
+        <p class="body-text">풀이 후 검산하는 습관 만들기</p>
+
+        <div class="assignment">
+          <span class="check">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <span class="txt">이번 주 과제: 유형 문제 10개 복습<span class="sub">풀이 후 검산까지 직접 해보며 습관을 만들어 보세요.</span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p class="note">이 리포트는 매일의수학 정재호 선생님이<br>김초강 학생의 이번 주 학습을 바탕으로 작성했습니다.</p>
+    <div class="signature">
+      <p class="name">정재호</p>
+      <p class="role">매일의수학 · 확통 담당</p>
+      <div class="underline"></div>
+    </div>
+  </footer>
+
+</main>
+
+</body>
+</html>
