@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!--
+  배포 전 확인: 교사가 정답과 표현을 최종 검토하세요.
+  - 이 파일 하나로 동작합니다(외부 요청은 Google Fonts뿐이며, 막혀도 기본 글꼴로 표시됩니다).
+  - 학생 이름 등 개인정보를 입력받거나 저장하지 않습니다. 브라우저 탭의 sessionStorage에
+    선택 번호·현재 문항·제출 여부만 저장하며, 탭을 닫거나 '다시 풀기'를 누르면 지워집니다.
+  - 정답과 해설은 제출 전에는 화면에 나오지 않지만, 페이지 소스에는 들어 있습니다.
+-->
+<meta name="description" content="미적분2 수열의 극한 5분 진단퀴즈. 5문항을 풀고 제출하면 바로 채점과 해설을 볼 수 있어요.">
+<meta name="theme-color" content="#3A55C7">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233A55C7'/%3E%3Ctext x='32' y='45' font-size='36' text-anchor='middle' fill='white' font-family='serif'%3E%E2%88%9E%3C/text%3E%3C/svg%3E">
+<title>수열의 극한 진단퀴즈 — 미적분2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1D1C33;
+    --ink-soft:#514E72;
+    --paper:#F4F4FB;
+    --surface:#FFFFFF;
+    --line:#E4E2F1;
+    --blue:#33499E;
+    --blue-fill:#3A55C7;
+    --blue-soft:#E9ECFB;
+    --violet:#5B3E9E;
+    --violet-fill:#6C48B8;
+    --violet-soft:#EFE8FA;
+    --ok:#1B6B47;
+    --ok-soft:#E4F3EB;
+    --bad:#A8271F;
+    --bad-soft:#FBE9E7;
+    --radius:18px;
+    --font-display:'Gowun Batang', 'Nanum Myeongjo', serif;
+    --font-body:'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --font-math:'Cambria Math', 'STIX Two Math', 'Times New Roman', serif;
+  }
+
+  *{ box-sizing:border-box; }
+  [hidden]{ display:none !important; }
+
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  /* Layout: the page scrolls inside .scroll and the nav bar sits below it,
+     so the bar can never cover a choice at any scroll position. */
+  html, body{ height:100%; }
+  body{ overflow:hidden; }
+  .shell{
+    height:100vh;
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+  }
+  .scroll{
+    flex:1;
+    min-height:0;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+  }
+  .app{
+    max-width:640px;
+    margin:0 auto;
+    padding:12px 16px 20px;
+  }
+
+  .sr-only{
+    position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+
+  button{ font-family:inherit; touch-action:manipulation; }
+  :focus-visible{ outline:3px solid var(--violet-fill); outline-offset:2px; }
+
+  /* ---------- top ---------- */
+  .top{
+    background:linear-gradient(120deg, var(--blue-fill) 0%, var(--violet-fill) 100%);
+    color:#fff;
+    border-radius:22px;
+    padding:22px 22px 20px;
+  }
+  .top .eyebrow{ margin:0; font-size:13px; letter-spacing:0.04em; opacity:0.9; }
+  .top h1{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:26px;
+    line-height:1.3;
+    margin:6px 0 4px;
+    text-wrap:balance;
+  }
+  .top .sub{ margin:0; font-size:14px; color:rgba(255,255,255,0.88); }
+
+  /* ---------- progress ---------- */
+  .progress{ margin:18px 0 14px; }
+  .progress-text{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:14px; color:var(--ink-soft);
+  }
+  .progress-text .pos{ font-size:17px; font-weight:600; color:var(--ink); }
+  .bar{
+    height:8px; border-radius:100px; background:var(--line);
+    margin:8px 0 10px; overflow:hidden;
+  }
+  .bar-fill{
+    height:100%; width:0;
+    background:linear-gradient(90deg, var(--blue-fill), var(--violet-fill));
+    border-radius:100px;
+    transition:width .25s ease;
+  }
+  .dots{ list-style:none; margin:0; padding:0; display:flex; justify-content:space-between; gap:6px; }
+  .dots li{ flex:1; display:flex; justify-content:center; }
+  .dot{
+    width:44px; height:44px; border-radius:50%;
+    border:2px solid var(--line);
+    background:var(--surface);
+    color:var(--ink-soft);
+    font-size:15px; font-weight:600;
+    cursor:pointer;
+  }
+  .dot.is-done{ border-color:var(--blue); color:var(--blue); background:var(--blue-soft); }
+  .dot.is-current{ background:var(--blue); border-color:var(--blue); color:#fff; }
+
+  /* ---------- question card ---------- */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:22px 18px 18px;
+  }
+  .qno{
+    display:inline-block;
+    margin:0 0 10px;
+    font-size:13px; font-weight:600;
+    color:var(--violet); background:var(--violet-soft);
+    padding:3px 12px; border-radius:100px;
+  }
+  .stem{
+    font-family:var(--font-body);
+    font-size:19px; font-weight:600; line-height:1.6;
+    margin:0 0 14px;
+  }
+  .stem:focus{ outline:none; }
+
+  /* math */
+  .m, .math{ font-family:var(--font-math); }
+  .m{ font-size:1.12em; white-space:nowrap; }
+  .math.block{
+    font-size:24px;
+    text-align:center;
+    padding:16px 8px;
+    margin:0 0 16px;
+    background:var(--paper);
+    border-radius:12px;
+    overflow-x:auto;
+  }
+  i{ font-family:var(--font-math); font-style:italic; }
+  sup, sub{ font-size:.68em; line-height:0; }
+  .frac{
+    display:inline-flex; flex-direction:column; align-items:center;
+    vertical-align:middle; line-height:1.35; margin:0 .15em;
+  }
+  .frac .num{ border-bottom:1.5px solid currentColor; padding:0 .3em .1em; }
+  .frac .den{ padding:.1em .3em 0; }
+  .lim{
+    display:inline-flex; flex-direction:column; align-items:center;
+    vertical-align:middle; line-height:1.1; margin-right:.35em; font-size:.95em;
+  }
+  .lim-sub{ font-size:.7em; }
+  .rad{ white-space:nowrap; }
+  .rad-in{ display:inline-block; border-top:1.5px solid currentColor; padding:.24em .12em 0; line-height:1.1; }
+
+  /* choices */
+  .choices{ border:0; padding:0; margin:0; display:grid; gap:10px; }
+  .choice{ position:relative; display:block; }
+  .choice input{
+    position:absolute; inset:0; width:100%; height:100%;
+    margin:0; opacity:0; cursor:pointer;
+  }
+  .box{
+    display:flex; align-items:center; gap:14px;
+    min-height:64px;
+    padding:12px 14px;
+    background:var(--surface);
+    border:2px solid var(--line);
+    border-radius:14px;
+    font-size:17px;
+    transition:border-color .12s ease, background-color .12s ease;
+  }
+  .mark{
+    width:34px; height:34px; border-radius:50%;
+    border:2px solid var(--blue);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+    font-size:16px; font-weight:600; color:var(--blue);
+  }
+  .ctext{ flex:1; min-width:0; overflow-wrap:anywhere; }
+  .choice input:checked + .box{ border-color:var(--blue); background:var(--blue-soft); }
+  .choice input:checked + .box .mark{ background:var(--blue); color:#fff; }
+  .choice input:focus-visible + .box{ outline:3px solid var(--violet-fill); outline-offset:2px; }
+
+  .hint{
+    margin:14px 2px 0;
+    font-size:14.5px;
+    color:var(--ink-soft);
+    line-height:1.9;
+  }
+  .link{
+    display:inline-block;
+    min-height:36px; min-width:44px;
+    padding:0 12px; margin:0 2px;
+    border:1.5px solid var(--blue);
+    border-radius:100px;
+    background:var(--surface); color:var(--blue);
+    font-size:14px; font-weight:600;
+    cursor:pointer;
+  }
+
+  /* ---------- bottom nav ---------- */
+  .navbar{
+    flex:none;
+    background:var(--surface);
+    border-top:1px solid var(--line);
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+  }
+  .navinner{
+    max-width:640px; margin:0 auto;
+    display:grid; grid-template-columns:1fr 1.5fr; gap:10px;
+  }
+  .btn{
+    font-size:17px; font-weight:600;
+    min-height:56px;
+    border-radius:14px;
+    border:2px solid transparent;
+    padding:0 18px;
+    cursor:pointer;
+  }
+  .btn-primary{ background:var(--blue); color:#fff; }
+  .btn-ghost{ background:var(--surface); color:var(--blue); border-color:var(--line); }
+  .btn-submit{ background:var(--violet); }
+  .btn:disabled{ opacity:.42; cursor:not-allowed; }
+
+  /* ---------- result ---------- */
+  .result h2{
+    font-family:var(--font-display);
+    font-size:24px; margin:8px 0 14px; line-height:1.35;
+  }
+  .result h2:focus{ outline:none; }
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px 18px;
+    margin-bottom:14px;
+  }
+  .panel h3{ margin:0 0 12px; font-size:17px; }
+  .scorebox{ display:flex; align-items:center; gap:18px; }
+  .ring{
+    --p:0;
+    width:112px; height:112px; border-radius:50%; flex-shrink:0;
+    background:conic-gradient(var(--blue-fill) calc(var(--p) * 1%), var(--blue-soft) 0);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .ring-in{
+    width:84px; height:84px; border-radius:50%; background:var(--surface);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    line-height:1.1;
+  }
+  .ring-in strong{ font-size:28px; font-family:var(--font-display); }
+  .ring-in span{ font-size:12px; color:var(--ink-soft); }
+  .stats{ display:grid; gap:2px; font-size:15px; color:var(--ink-soft); }
+  .stats b{ color:var(--ink); font-size:20px; }
+
+  .strip{ list-style:none; margin:16px 0 0; padding:0; display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; }
+  .strip li{
+    text-align:center; border-radius:12px; padding:8px 2px;
+    font-size:13px; font-weight:600; line-height:1.4;
+  }
+  .strip .ok{ background:var(--ok-soft); color:var(--ok); }
+  .strip .bad{ background:var(--bad-soft); color:var(--bad); }
+  .strip .n{ display:block; font-size:12px; font-weight:400; opacity:.85; }
+
+  .rev{
+    border:1px solid var(--line);
+    border-left:5px solid var(--bad);
+    border-radius:14px;
+    padding:16px 14px;
+    margin-bottom:12px;
+    background:var(--surface);
+  }
+  .rev h4{ margin:0 0 8px; font-size:16px; display:flex; align-items:center; gap:8px; }
+  .badge{
+    font-size:12px; font-weight:600; padding:2px 10px; border-radius:100px;
+    background:var(--bad-soft); color:var(--bad);
+  }
+  .rev .stem{ font-size:16px; font-weight:500; margin-bottom:8px; }
+  .rev .math.block{ font-size:20px; padding:10px 6px; margin-bottom:10px; }
+  .answer-line{
+    display:flex; gap:10px; align-items:flex-start;
+    padding:10px 12px; border-radius:10px; margin-bottom:8px;
+    font-size:15.5px;
+  }
+  .answer-line .lbl{ flex-shrink:0; font-size:12.5px; font-weight:600; min-width:64px; padding-top:2px; }
+  .answer-line.mine{ background:var(--bad-soft); color:var(--bad); }
+  .answer-line.right{ background:var(--ok-soft); color:var(--ok); }
+  .answer-line .val{ color:var(--ink); flex:1; min-width:0; }
+  .note{ margin:8px 0 0; font-size:14.5px; line-height:1.65; }
+  .note b{ color:var(--violet); }
+  .note .m{ white-space:normal; overflow-wrap:anywhere; }
+
+  .allright{
+    background:var(--ok-soft); color:var(--ok);
+    border-radius:14px; padding:16px; font-weight:600;
+  }
+
+  .suggest{ background:var(--violet-soft); border-color:transparent; }
+  .suggest h3{ color:var(--violet); }
+  .suggest .lead{ margin:0 0 10px; font-weight:600; font-size:16.5px; }
+  .suggest ul{ margin:0 0 4px; padding-left:20px; }
+  .suggest li{ margin-bottom:4px; font-size:15.5px; }
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 0; padding:0; list-style:none; }
+  .chips li{
+    background:var(--surface); color:var(--violet);
+    border-radius:100px; padding:4px 12px; font-size:13.5px; font-weight:600; margin:0;
+  }
+
+  .actions{ display:grid; gap:10px; margin:6px 0 16px; padding-bottom:env(safe-area-inset-bottom); }
+
+  /* teacher key */
+  .key{ border:2px dashed var(--violet-fill); background:var(--surface); border-radius:var(--radius); padding:18px 14px; margin-bottom:14px; }
+  .key h3{ margin:0 0 8px; color:var(--violet); }
+  .review-note{
+    margin:0 0 12px; padding:10px 12px;
+    background:#FFF4D6; border:1px solid #E5C766; border-radius:12px;
+    color:#5C4500; font-size:14.5px; font-weight:600; line-height:1.5;
+  }
+  .key .summary{ margin:0 0 14px; font-size:15px; color:var(--ink-soft); }
+  .key-item{ border-top:1px solid var(--line); padding:14px 0 4px; }
+  .key-item h4{ margin:0 0 6px; font-size:15.5px; }
+  .key-item .tags{ font-size:12.5px; font-weight:500; color:var(--ink-soft); margin-left:6px; }
+  .opts{ list-style:none; margin:8px 0; padding:0; display:grid; gap:6px; }
+  .opts li{
+    display:flex; gap:10px; align-items:flex-start;
+    padding:8px 10px; border-radius:10px; border:1px solid var(--line); font-size:15px;
+  }
+  .opts li .o{ flex-shrink:0; font-weight:600; }
+  .opts li .c{ flex:1; min-width:0; }
+  .opts li .tag{ flex-shrink:0; font-size:12px; font-weight:600; }
+  .opts li.is-answer{ background:var(--ok-soft); border-color:var(--ok); }
+  .opts li.is-answer .tag{ color:var(--ok); }
+  .opts li.is-pick:not(.is-answer){ background:var(--bad-soft); border-color:var(--bad); }
+  .opts li.is-pick:not(.is-answer) .tag{ color:var(--bad); }
+
+  @media (max-width:380px){
+    .top{ padding:16px 18px; }
+    .top h1{ font-size:22px; }
+    .progress{ margin:14px 0 12px; }
+    .card{ padding:18px 14px 14px; }
+    .math.block{ font-size:21px; }
+    .scorebox{ gap:12px; }
+    .ring{ width:96px; height:96px; }
+    .ring-in{ width:72px; height:72px; }
+    .ring-in strong{ font-size:24px; }
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .bar-fill, .box{ transition:none; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="scroll" id="scroll">
+<div class="app">
+
+  <header class="top">
+    <p class="eyebrow">미적분2 · 2학년 · sunsky 선생님</p>
+    <h1>수열의 극한 진단퀴즈</h1>
+    <p class="sub">5문항 · 약 5분 · 제출하기 전까지는 답을 바꿀 수 있어요.</p>
+  </header>
+
+  <main>
+    <section id="quiz" aria-label="진단퀴즈">
+      <div class="progress">
+        <div class="progress-text">
+          <span class="pos" id="posText"></span>
+          <span id="ansText"></span>
+        </div>
+        <div class="bar" id="bar" role="progressbar" aria-label="답변 진행률" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0">
+          <div class="bar-fill" id="barFill"></div>
+        </div>
+        <ol class="dots" id="dots"></ol>
+      </div>
+
+      <div class="card" id="card"></div>
+      <p class="hint" id="hint" aria-live="polite"></p>
+    </section>
+
+    <section id="result" class="result" hidden></section>
+  </main>
+
+</div>
+</div>
+
+<nav class="navbar" id="nav" aria-label="문제 이동">
+  <div class="navinner">
+    <button type="button" class="btn btn-ghost" id="prev">← 이전</button>
+    <button type="button" class="btn btn-primary" id="next">다음 →</button>
+  </div>
+</nav>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ---------- math helpers (static markup only) ---------- */
+  const n = '<i>n</i>';
+  const r = '<i>r</i>';
+  const m = s => `<span class="m">${s}</span>`;
+  const p = (base, e) => `${base}<sup>${e}</sup>`;
+  const frac = (a, b) => `<span class="frac"><span class="num">${a}</span><span class="den">${b}</span></span>`;
+  const lim = `<span class="lim"><span>lim</span><span class="lim-sub">${n}→∞</span></span>`;
+  const root = x => `<span class="rad">√<span class="rad-in">${x}</span></span>`;
+  const an = `<i>a</i><sub>${n}</sub>`;
+  const series = `Σ<sub>${n}=1</sub><sup>∞</sup>${an}`;
+
+  const CIRCLED = ['①', '②', '③', '④'];
+
+  /* ---------- questions (answers/explanations are rendered only after submit) ---------- */
+  const QUESTIONS = [
+    {
+      type: '계산',
+      concept: '수열의 극한값 계산',
+      stem: '다음 극한의 값은?',
+      math: `${lim} ${frac(`3${p(n, 2)}+2${n}−1`, `${p(n, 2)}+5`)}`,
+      choices: [m('0'), m('2'), m('3'), '발산'],
+      answer: 2,
+      explain: `분자·분모를 ${m(p(n, 2))}으로 나누면 ${m(`(3+2/${n}−1/${p(n, 2)})/(1+5/${p(n, 2)})`)} → 3이에요.`,
+      review: '분수꼴 수열의 극한 (최고차항의 계수 비교)'
+    },
+    {
+      type: '계산',
+      concept: '등비수열의 극한',
+      stem: '다음 극한의 값은?',
+      math: `${lim} ${frac(`${p(2, `${n}+1`)}+${p(3, n)}`, `${p(3, `${n}+1`)}−${p(2, n)}`)}`,
+      choices: [m('0'), m(frac(1, 3)), m(frac(2, 3)), m('1')],
+      answer: 1,
+      explain: `분자·분모를 ${m(p(3, n))}으로 나누면 ${m(`(2·(2/3)<sup>${n}</sup>+1)/(3−(2/3)<sup>${n}</sup>)`)} → 1/3이에요.`,
+      review: '등비수열의 극한 (밑이 가장 큰 항으로 나누기, |r|<1이면 rⁿ → 0)'
+    },
+    {
+      type: '개념',
+      concept: '등비수열의 수렴 조건',
+      stem: `수열 ${m(`{${p(r, n)}}`)}이 수렴하는 실수 ${m(r)}의 값 전체의 범위는?`,
+      math: '',
+      choices: [
+        m(`−1 &lt; ${r} ≤ 1`),
+        m(`−1 &lt; ${r} &lt; 1`),
+        m(`−1 ≤ ${r} &lt; 1`),
+        m(`−1 ≤ ${r} ≤ 1`)
+      ],
+      answer: 0,
+      explain: `${m(`${r}=1`)}이면 1로 수렴하고, ${m(`${r}=−1`)}이면 1과 −1을 오가며 발산해요.`,
+      review: '등비수열 rⁿ의 수렴 조건 (r = 1은 포함, r = −1은 제외)'
+    },
+    {
+      type: '오개념 확인',
+      concept: '급수와 일반항의 극한',
+      stem: `수열 ${m(`{${an}}`)}과 급수 ${m(series)}에 대한 설명으로 옳은 것은?`,
+      math: '',
+      choices: [
+        `급수 ${m(series)}이 발산하면 ${m(`lim ${an} ≠ 0`)}이다.`,
+        `${m(`lim ${an} = 0`)}이면 급수 ${m(series)}은 반드시 수렴한다.`,
+        `${m(`lim ${an} ≠ 0`)}이어도 급수 ${m(series)}이 수렴할 수 있다.`,
+        `급수 ${m(series)}이 수렴하면 ${m(`lim ${an} = 0`)}이다.`
+      ],
+      answer: 3,
+      explain: `급수가 수렴하면 ${m(`${an}=<i>S</i><sub>${n}</sub>−<i>S</i><sub>${n}−1</sub>→0`)}이라 ④가 참이에요. ③은 ④와 모순이고, ①②는 조화급수 ${m(`Σ1/${n}`)}이 반례예요.`,
+      review: '급수의 수렴과 일반항 (lim aₙ = 0은 필요조건일 뿐 충분조건이 아님)'
+    },
+    {
+      type: '오개념 확인',
+      concept: '수열의 극한값 계산',
+      stem: '다음 극한의 값은?',
+      math: `${lim} (${root(`${p(n, 2)}+2${n}`)} − ${n})`,
+      choices: [m('0'), m('1'), m('2'), m('∞')],
+      answer: 1,
+      explain: `유리화하면 ${m(`2${n}/(√(${p(n, 2)}+2${n})+${n}) = 2/(√(1+2/${n})+1)`)} → 1이에요.`,
+      review: '∞−∞ 꼴의 극한 (무리식 유리화, ∞−∞ = 0이 아님)'
+    }
+  ];
+
+  const total = QUESTIONS.length;
+  const state = { cur: 0, ans: Array(total).fill(null), done: false, key: false };
+  const $ = id => document.getElementById(id);
+
+  /* ---------- persistence: survives refresh, cleared when the tab is closed ---------- */
+  const STORE_KEY = 'wk2-limit-diagnostic-v1';
+
+  function save() {
+    try {
+      sessionStorage.setItem(STORE_KEY, JSON.stringify({ cur: state.cur, ans: state.ans, done: state.done }));
+    } catch (e) { /* storage unavailable: quiz still works, just not persisted */ }
+  }
+
+  function clearSaved() {
+    try { sessionStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }
+  }
+
+  function load() {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(STORE_KEY));
+      if (!saved || !Array.isArray(saved.ans) || saved.ans.length !== total) return;
+      if (!saved.ans.every(a => a === null || (Number.isInteger(a) && a >= 0 && a < 4))) return;
+      state.ans = saved.ans;
+      state.cur = Number.isInteger(saved.cur) && saved.cur >= 0 && saved.cur < total ? saved.cur : 0;
+      state.done = saved.done === true && saved.ans.every(a => a !== null);
+    } catch (e) { /* corrupted or unavailable: start fresh */ }
+  }
+
+  const unanswered = () => state.ans.flatMap((a, i) => (a === null ? [i] : []));
+  const answeredCount = () => total - unanswered().length;
+
+  /* ---------- quiz screen ---------- */
+  function renderQuestion() {
+    const q = QUESTIONS[state.cur];
+    const no = state.cur + 1;
+    $('card').innerHTML = `
+      <span class="qno">문제 ${no}</span>
+      <h2 class="stem" id="stem" tabindex="-1">${q.stem}</h2>
+      ${q.math ? `<div class="math block">${q.math}</div>` : ''}
+      <fieldset class="choices" style="border:0;margin:0;padding:0">
+        <legend class="sr-only">문제 ${no}의 선택지</legend>
+        ${q.choices.map((c, i) => `
+          <label class="choice">
+            <input type="radio" name="q${state.cur}" value="${i}" ${state.ans[state.cur] === i ? 'checked' : ''}>
+            <span class="box"><span class="mark">${CIRCLED[i]}</span><span class="ctext">${c}</span></span>
+          </label>`).join('')}
+      </fieldset>`;
+    updateMeta();
+  }
+
+  function updateMeta() {
+    const done = answeredCount();
+    const last = state.cur === total - 1;
+    const left = unanswered();
+
+    $('posText').textContent = `문제 ${state.cur + 1} / ${total}`;
+    $('ansText').textContent = `답변 ${done} / ${total}`;
+    $('barFill').style.width = `${(done / total) * 100}%`;
+    $('bar').setAttribute('aria-valuenow', String(done));
+
+    $('dots').innerHTML = QUESTIONS.map((_, i) => {
+      const cls = [state.ans[i] !== null ? 'is-done' : '', i === state.cur ? 'is-current' : ''].join(' ').trim();
+      const label = `${i + 1}번 문제, ${state.ans[i] !== null ? '답함' : '아직 답하지 않음'}`;
+      return `<li><button type="button" class="dot ${cls}" data-go="${i}" aria-label="${label}" ${i === state.cur ? 'aria-current="step"' : ''}>${i + 1}</button></li>`;
+    }).join('');
+
+    if (left.length) {
+      $('hint').innerHTML = `아직 답하지 않은 문제: ${left.map(i => `<button type="button" class="link" data-go="${i}">${i + 1}번</button>`).join('')}`;
+    } else if (last) {
+      $('hint').textContent = '모든 문제에 답했어요. 제출하면 바로 채점되고, 제출한 뒤에는 답을 바꿀 수 없어요.';
+    } else {
+      $('hint').textContent = '모든 문제에 답했어요. 마지막 문제에서 제출할 수 있어요.';
+    }
+
+    $('prev').disabled = state.cur === 0;
+    const next = $('next');
+    if (last) {
+      next.textContent = '제출하기';
+      next.classList.add('btn-submit');
+      next.disabled = left.length > 0;
+    } else {
+      next.textContent = '다음 →';
+      next.classList.remove('btn-submit');
+      next.disabled = false;
+    }
+  }
+
+  function go(i) {
+    if (i < 0 || i >= total || i === state.cur) return;
+    state.cur = i;
+    save();
+    renderQuestion();
+    $('scroll').scrollTo({ top: 0 });
+    $('stem').focus({ preventScroll: true });
+  }
+
+  /* ---------- result screen ---------- */
+  const choiceHtml = (q, i) => `${CIRCLED[i]} ${q.choices[i]}`;
+
+  function nextStep(score) {
+    if (score === total) {
+      return {
+        lead: '아주 좋아요! 기본 개념이 탄탄해요.',
+        items: ['수업에서는 응용 문제로 바로 넘어가도 좋아요.', '등비급수가 수렴하도록 공비의 범위를 구하는 문제에 도전해 보세요.', '극한값이 주어졌을 때 미정계수를 구하는 문제도 풀어 보세요.']
+      };
+    }
+    if (score === total - 1) {
+      return {
+        lead: '거의 다 왔어요! 한 문제만 짚으면 돼요.',
+        items: ['틀린 문제의 해설을 다시 읽고, 왜 헷갈렸는지 한 줄로 적어 보세요.', '같은 개념의 문제를 2~3개 더 풀어 보세요.']
+      };
+    }
+    if (score === total - 2) {
+      return {
+        lead: '기본기는 있어요. 몇 가지 개념만 다지면 좋아요.',
+        items: ['아래 개념을 교과서 예제로 먼저 복습해 보세요.', '틀린 문제는 풀이를 덮고 다시 풀어 본 뒤 수업에 오세요.']
+      };
+    }
+    return {
+      lead: '괜찮아요. 지금 어디서 막히는지 확인한 것만으로도 시작이에요.',
+      items: ['수열의 수렴·발산의 뜻과 극한의 기본 성질부터 차근차근 다시 봐요.', '이해가 안 된 부분에 표시해 두었다가 수업 때 꼭 질문해 주세요.']
+    };
+  }
+
+  function renderResult() {
+    const rows = QUESTIONS.map((q, i) => ({ q, i, pick: state.ans[i], ok: state.ans[i] === q.answer }));
+    const wrong = rows.filter(x => !x.ok);
+    const score = total - wrong.length;
+    const pct = Math.round((score / total) * 100);
+    const step = nextStep(score);
+    const concepts = [...new Set(wrong.map(x => x.q.review))];
+
+    const wrongHtml = wrong.length
+      ? wrong.map(({ q, i, pick }) => `
+        <article class="rev">
+          <h4>문제 ${i + 1} <span class="badge">오답</span></h4>
+          <p class="stem">${q.stem}</p>
+          ${q.math ? `<div class="math block">${q.math}</div>` : ''}
+          <div class="answer-line mine"><span class="lbl">내가 고른 답</span><span class="val">${choiceHtml(q, pick)}</span></div>
+          <div class="answer-line right"><span class="lbl">정답</span><span class="val">${choiceHtml(q, q.answer)}</span></div>
+          <p class="note"><b>해설</b> ${q.explain}</p>
+          <p class="note"><b>복습할 개념</b> ${q.review}</p>
+        </article>`).join('')
+      : '<p class="allright">모든 문제를 맞혔어요! 해설을 볼 문제가 없어요.</p>';
+
+    $('result').innerHTML = `
+      <h2 id="resultTitle" tabindex="-1">채점 결과</h2>
+
+      <div class="panel">
+        <div class="scorebox">
+          <div class="ring" style="--p:${pct}" role="img" aria-label="${total}문제 중 ${score}문제 정답">
+            <div class="ring-in"><strong>${score}</strong><span>/ ${total}점</span></div>
+          </div>
+          <div class="stats">
+            <span>정답률</span>
+            <b>${pct}%</b>
+            <span>${total}문제 중 ${score}문제 정답</span>
+          </div>
+        </div>
+        <ul class="strip">
+          ${rows.map(x => `<li class="${x.ok ? 'ok' : 'bad'}"><span class="n">${x.i + 1}번</span>${x.ok ? '○ 정답' : '✕ 오답'}</li>`).join('')}
+        </ul>
+      </div>
+
+      <div class="panel">
+        <h3>틀린 문제 해설</h3>
+        ${wrongHtml}
+      </div>
+
+      <div class="panel suggest">
+        <h3>다음 학습 제안</h3>
+        <p class="lead">${step.lead}</p>
+        <ul>${step.items.map(t => `<li>${t}</li>`).join('')}</ul>
+        ${concepts.length ? `<ul class="chips" aria-label="복습할 개념">${concepts.map(c => `<li>${c}</li>`).join('')}</ul>` : ''}
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="retry">다시 풀기</button>
+        <button type="button" class="btn btn-ghost" id="keyBtn" aria-expanded="false" aria-controls="keyPanel">교사용 정답 보기</button>
+      </div>
+      <div id="keyPanel" hidden></div>`;
+  }
+
+  function renderKey() {
+    const summary = QUESTIONS.map(q => CIRCLED[q.answer]).join(' ');
+    return `
+      <section class="key" aria-label="교사용 정답표">
+        <h3>교사용 정답표</h3>
+        <p class="review-note" role="note">⚠ 교사가 정답과 표현을 최종 검토하세요.</p>
+        <p class="summary">정답 요약: <b>${summary}</b></p>
+        ${QUESTIONS.map((q, i) => `
+          <div class="key-item">
+            <h4>문제 ${i + 1}<span class="tags">${q.type} · ${q.concept}</span></h4>
+            <div>${q.stem}</div>
+            ${q.math ? `<div class="math block" style="font-size:19px">${q.math}</div>` : ''}
+            <ul class="opts">
+              ${q.choices.map((c, k) => `
+                <li class="${k === q.answer ? 'is-answer' : ''} ${state.ans[i] === k ? 'is-pick' : ''}">
+                  <span class="o">${CIRCLED[k]}</span><span class="c">${c}</span>
+                  <span class="tag">${k === q.answer ? '정답' : ''}${k === q.answer && state.ans[i] === k ? ' · ' : ''}${state.ans[i] === k ? '학생 선택' : ''}</span>
+                </li>`).join('')}
+            </ul>
+            <p class="note"><b>해설</b> ${q.explain}</p>
+            <p class="note"><b>복습할 개념</b> ${q.review}</p>
+          </div>`).join('')}
+      </section>`;
+  }
+
+  function toggleKey() {
+    state.key = !state.key;
+    const panel = $('keyPanel');
+    const btn = $('keyBtn');
+    panel.innerHTML = state.key ? renderKey() : '';
+    panel.hidden = !state.key;
+    btn.textContent = state.key ? '교사용 정답 닫기' : '교사용 정답 보기';
+    btn.setAttribute('aria-expanded', String(state.key));
+    if (state.key) panel.scrollIntoView({ block: 'start' });
+  }
+
+  function showResult() {
+    state.key = false;
+    renderResult();
+    $('quiz').hidden = true;
+    $('nav').hidden = true;
+    $('result').hidden = false;
+  }
+
+  function submit() {
+    if (unanswered().length) return;
+    state.done = true;
+    save();
+    showResult();
+    $('scroll').scrollTo({ top: 0 });
+    $('resultTitle').focus({ preventScroll: true });
+  }
+
+  function retry() {
+    state.cur = 0;
+    state.ans = Array(total).fill(null);
+    state.done = false;
+    state.key = false;
+    clearSaved();
+    $('result').innerHTML = '';
+    $('result').hidden = true;
+    $('quiz').hidden = false;
+    $('nav').hidden = false;
+    renderQuestion();
+    $('scroll').scrollTo({ top: 0 });
+    $('stem').focus({ preventScroll: true });
+  }
+
+  /* ---------- events ---------- */
+  $('card').addEventListener('change', e => {
+    if (e.target.matches('input[type="radio"]')) {
+      state.ans[state.cur] = Number(e.target.value);
+      save();
+      updateMeta();
+    }
+  });
+  document.addEventListener('click', e => {
+    const goBtn = e.target.closest('[data-go]');
+    if (goBtn) { go(Number(goBtn.dataset.go)); return; }
+    if (e.target.closest('#retry')) retry();
+    else if (e.target.closest('#keyBtn')) toggleKey();
+  });
+  $('prev').addEventListener('click', () => go(state.cur - 1));
+  $('next').addEventListener('click', () => {
+    if (state.cur < total - 1) go(state.cur + 1);
+    else submit();
+  });
+
+  load();
+  if (state.done) showResult();
+  else renderQuestion();
+})();
+</script>
+</body>
+</html>
