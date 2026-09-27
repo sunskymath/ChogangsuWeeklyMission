@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!--
+  배포 전 확인: 교사가 표현과 안내 문구를 최종 검토하세요.
+  - 이 파일 하나로 동작합니다(외부 요청은 Google Fonts뿐이며, 막혀도 기본 글꼴로 표시됩니다).
+  - 학생 이름 등 개인정보를 입력받지 않습니다. 실험 기록(예측·설명)은 이 브라우저 탭의
+    sessionStorage에만 저장되며, 탭을 닫거나 '기록 지우기'를 누르면 지워집니다.
+  - 점수를 매기지 않습니다. 예측과 그래프가 '같음/다름'만 보여 주고, 학생이 생각을
+    어떻게 고쳤는지를 기록합니다.
+  - '완성 예시'(sunsky의 실험 2회)는 읽기 전용이며, '기록 인쇄하기'는 학생 본인의 기록만 인쇄합니다.
+-->
+<meta name="description" content="y=(x−h)²+k 그래프 예측·조작·설명 실험. h와 k를 정하고 꼭짓점과 이동 방향을 먼저 예측한 뒤 그래프로 확인하고, 생각을 어떻게 고쳤는지 기록해요.">
+<meta name="theme-color" content="#3A55C7">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233A55C7'/%3E%3Cpath d='M14 14 Q32 70 50 14' stroke='white' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>포물선 이동 실험 — 이차함수</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1D1C33;
+    --ink-soft:#514E72;
+    --paper:#F4F4FB;
+    --surface:#FFFFFF;
+    --line:#E4E2F1;
+    --grid:#ECEBF5;
+    --blue:#33499E;
+    --blue-fill:#3A55C7;
+    --blue-soft:#E9ECFB;
+    --violet:#5B3E9E;
+    --violet-fill:#6C48B8;
+    --violet-soft:#EFE8FA;
+    --amber:#A35A0B;
+    --amber-soft:#FBF0E1;
+    --base:#9A98B3;
+    --radius:18px;
+    --font-display:'Gowun Batang', 'Nanum Myeongjo', serif;
+    --font-body:'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --font-math:'Cambria Math', 'STIX Two Math', 'Times New Roman', serif;
+  }
+
+  *{ box-sizing:border-box; }
+  [hidden]{ display:none !important; }
+
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .app{
+    max-width:640px;
+    margin:0 auto;
+    padding:12px 16px 40px;
+  }
+  .sr-only{
+    position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+  button, input, textarea{ font-family:inherit; font-size:inherit; color:inherit; }
+  button{ touch-action:manipulation; }
+  :focus-visible{ outline:3px solid var(--violet-fill); outline-offset:2px; }
+
+  /* ---------- top ---------- */
+  .top{
+    background:linear-gradient(120deg, var(--blue-fill) 0%, var(--violet-fill) 100%);
+    color:#fff;
+    border-radius:22px;
+    padding:22px 22px 20px;
+    margin-bottom:16px;
+  }
+  .top .eyebrow{ margin:0; font-size:13px; letter-spacing:0.04em; opacity:0.9; }
+  .top h1{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:26px;
+    line-height:1.3;
+    margin:6px 0 8px;
+    text-wrap:balance;
+  }
+  .top .sub{ margin:0; font-size:14px; color:rgba(255,255,255,0.9); }
+  .steps{
+    list-style:none; margin:14px 0 0; padding:0;
+    display:flex; gap:6px; flex-wrap:wrap;
+  }
+  .steps li{
+    font-size:13px; font-weight:600;
+    padding:4px 11px; border-radius:100px;
+    background:rgba(255,255,255,0.16);
+    color:rgba(255,255,255,0.85);
+  }
+  .steps li.is-on{ background:#fff; color:var(--blue); }
+
+  /* ---------- cards ---------- */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px 18px 18px;
+    margin-bottom:14px;
+  }
+  .card h2{
+    font-size:18px; font-weight:600;
+    margin:0 0 4px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .card h2 .no{
+    display:inline-grid; place-items:center;
+    width:26px; height:26px; border-radius:50%;
+    background:var(--violet-soft); color:var(--violet);
+    font-size:14px;
+  }
+  .card .lead{ margin:0 0 14px; color:var(--ink-soft); font-size:14.5px; }
+  .card.is-locked{ opacity:.62; }
+
+  /* math */
+  .m{ font-family:var(--font-math); white-space:nowrap; }
+  i{ font-family:var(--font-math); font-style:italic; }
+  sup{ font-size:.68em; line-height:0; }
+  .eq{
+    font-family:var(--font-math);
+    font-size:26px;
+    text-align:center;
+    padding:12px 8px;
+    margin:0 0 14px;
+    background:var(--paper);
+    border-radius:12px;
+    overflow-x:auto;
+    white-space:nowrap;
+  }
+
+  /* sliders */
+  .slider{ margin:0 0 12px; }
+  .slider-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:2px;
+  }
+  .slider-head label{ font-weight:600; }
+  .slider-head output{
+    font-family:var(--font-math); font-size:20px; font-weight:700;
+    color:var(--blue); min-width:3ch; text-align:right;
+  }
+  input[type=range]{
+    width:100%; height:36px; margin:0;
+    accent-color:var(--blue-fill);
+    cursor:pointer;
+  }
+  input[type=range]:disabled{ cursor:not-allowed; }
+  .ticks{
+    display:flex; justify-content:space-between;
+    font-size:12px; color:var(--ink-soft);
+    padding:0 6px;
+    font-family:var(--font-math);
+  }
+
+  /* buttons */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    min-height:48px; padding:10px 18px;
+    border-radius:14px;
+    border:2px solid transparent;
+    font-size:16px; font-weight:600;
+    cursor:pointer;
+  }
+  .btn-primary{ background:var(--blue); color:#fff; }
+  .btn-violet{ background:var(--violet); color:#fff; }
+  .btn-ghost{ background:var(--surface); color:var(--blue); border-color:var(--line); }
+  .btn-small{ min-height:40px; padding:6px 14px; font-size:14px; border-radius:12px; }
+  .btn:disabled{ opacity:.42; cursor:not-allowed; }
+  .btn-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+  .btn-row .btn{ flex:1 1 200px; }
+
+  /* prediction inputs */
+  .q{ font-weight:600; margin:0 0 8px; }
+  .vertex-in{
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    font-family:var(--font-math); font-size:26px;
+    margin:0 0 18px;
+  }
+  .stepper{
+    display:inline-flex; align-items:center;
+    border:2px solid var(--line); border-radius:14px;
+    background:var(--surface);
+  }
+  .stepper:focus-within{ border-color:var(--violet-fill); }
+  .stepper button{
+    width:40px; height:48px; border:0; background:none;
+    color:var(--violet); font-size:22px; cursor:pointer;
+  }
+  .stepper input{
+    width:3.2ch; border:0; background:none; text-align:center;
+    font-family:var(--font-math); font-size:24px; font-weight:700;
+    color:var(--violet);
+    -moz-appearance:textfield; appearance:textfield;
+    padding:0;
+  }
+  .stepper input::-webkit-outer-spin-button,
+  .stepper input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .stepper input:focus{ outline:none; }
+  .stepper input::placeholder{ color:#B9B6D3; }
+
+  .seg{ border:0; padding:0; margin:0 0 14px; }
+  .seg legend{ font-weight:600; padding:0; margin:0 0 8px; }
+  .seg-opts{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+  .seg-opt{ position:relative; }
+  .seg-opt input{ position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+  .seg-opt span{
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    min-height:48px; padding:6px 8px;
+    border:2px solid var(--line); border-radius:12px;
+    font-size:15px; font-weight:500;
+    background:var(--surface);
+  }
+  .seg-opt input:checked + span{ border-color:var(--violet-fill); background:var(--violet-soft); color:var(--violet); font-weight:600; }
+  .seg-opt input:focus-visible + span{ outline:3px solid var(--violet-fill); outline-offset:2px; }
+  .seg-opt input:disabled{ cursor:not-allowed; }
+
+  textarea{
+    width:100%; min-height:84px; resize:vertical;
+    padding:10px 12px;
+    border:2px solid var(--line); border-radius:12px;
+    background:var(--surface);
+    line-height:1.55;
+  }
+  textarea:focus{ outline:none; border-color:var(--violet-fill); }
+  .field-label{ display:block; font-weight:600; margin:0 0 6px; }
+  .field-label small{ font-weight:400; color:var(--ink-soft); }
+  .hint{ margin:8px 0 0; font-size:14px; color:var(--ink-soft); min-height:1.4em; }
+
+  /* graph */
+  .graph-wrap{ position:relative; }
+  svg.graph{ display:block; width:100%; height:auto; border-radius:12px; background:var(--surface); touch-action:manipulation; }
+  .graph text{ font-family:var(--font-body); }
+  .legend{
+    list-style:none; margin:10px 0 0; padding:0;
+    display:flex; flex-wrap:wrap; gap:6px 14px;
+    font-size:13.5px; color:var(--ink-soft);
+  }
+  .legend li{ display:flex; align-items:center; gap:6px; }
+  .legend svg{ flex:none; }
+
+  /* compare */
+  .compare{ width:100%; border-collapse:collapse; margin:0 0 12px; font-size:15px; }
+  .compare th, .compare td{ padding:9px 6px; border-bottom:1px solid var(--line); text-align:center; }
+  .compare th{ font-size:13px; font-weight:600; color:var(--ink-soft); }
+  .compare td:first-child, .compare th:first-child{ text-align:left; }
+  .compare .pv{ color:var(--violet); font-weight:600; }
+  .compare .av{ color:var(--blue); font-weight:600; }
+  .compare.values td, .compare.values th{ font-family:var(--font-math); font-size:16px; padding:7px 4px; text-align:center; }
+  .compare.values tr > :first-child{ font-style:italic; color:var(--ink-soft); }
+  .compare.values .v0{ color:var(--blue); font-weight:700; }
+  .tag{
+    display:inline-block; padding:2px 10px; border-radius:100px;
+    font-size:13px; font-weight:600; white-space:nowrap;
+  }
+  .tag-same{ background:var(--blue-soft); color:var(--blue); }
+  .tag-diff{ background:var(--amber-soft); color:var(--amber); }
+
+  .notes{ margin:0 0 16px; padding:12px 14px; border-radius:12px; background:var(--paper); }
+  .notes p{ margin:0; font-size:14.5px; }
+  .notes p + p{ margin-top:8px; }
+  .notes b{ color:var(--ink); }
+
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px; }
+  .chip{ position:relative; }
+  .chip input{ position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+  .chip span{
+    display:inline-flex; align-items:center; min-height:40px;
+    padding:6px 14px; border-radius:100px;
+    border:2px solid var(--line); background:var(--surface);
+    font-size:14px;
+  }
+  .chip input:checked + span{ border-color:var(--violet-fill); background:var(--violet-soft); color:var(--violet); font-weight:600; }
+  .chip input:focus-visible + span{ outline:3px solid var(--violet-fill); outline-offset:2px; }
+  .chip.is-suggested span::after{ content:'•'; margin-left:6px; color:var(--amber); }
+
+  /* flow & log */
+  .flow{ margin:0 0 16px; }
+  .flow-row{ display:flex; align-items:center; gap:10px; margin:0 0 6px; }
+  .flow-row .lbl{ flex:none; width:64px; font-size:14px; font-weight:600; }
+  .flow-cells{ display:flex; gap:5px; flex-wrap:wrap; }
+  .cell{
+    width:28px; height:28px; border-radius:8px;
+    display:grid; place-items:center;
+    font-size:12px; font-weight:600;
+  }
+  .cell.same{ background:var(--blue-soft); color:var(--blue); }
+  .cell.diff{ background:var(--amber-soft); color:var(--amber); box-shadow:inset 0 0 0 2px var(--amber); }
+  .flow-note{ margin:4px 0 0; font-size:14px; color:var(--ink-soft); }
+  .flow-note + .flow-note{ margin-top:2px; }
+
+  .log{ list-style:none; margin:0; padding:0; display:grid; gap:10px; }
+  .log li{
+    border:1px solid var(--line); border-radius:14px;
+    padding:12px 14px;
+    font-size:14.5px;
+  }
+  .log .head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:4px; }
+  .log .head b{ font-size:13px; color:var(--ink-soft); font-weight:600; }
+  .log .head .m{ font-size:17px; }
+  .log p{ margin:3px 0 0; }
+  .log .k{ color:var(--ink-soft); font-size:13px; margin-right:4px; }
+  .log .explain{ margin-top:8px; padding:8px 10px; background:var(--violet-soft); border-radius:10px; }
+  .log .explain.is-missing{ background:var(--amber-soft); color:var(--amber); }
+  .empty{ color:var(--ink-soft); font-size:14.5px; margin:0; }
+
+  .toast{
+    position:fixed; left:50%; bottom:20px; transform:translateX(-50%);
+    max-width:calc(100% - 32px);
+    background:var(--ink); color:#fff;
+    padding:10px 16px; border-radius:12px;
+    font-size:14.5px;
+    box-shadow:0 6px 20px rgba(29,28,51,.25);
+    z-index:10;
+  }
+
+  footer{ text-align:center; font-size:13px; color:var(--ink-soft); margin-top:20px; }
+
+  /* example */
+  .example summary{
+    list-style:none; cursor:pointer;
+    display:flex; flex-direction:column; gap:2px;
+    padding-right:28px; position:relative;
+  }
+  .example summary::-webkit-details-marker{ display:none; }
+  .example summary::after{
+    content:'+'; position:absolute; right:2px; top:50%; transform:translateY(-50%);
+    font-size:24px; color:var(--violet);
+  }
+  .example[open] summary::after{ content:'−'; }
+  .example[open] summary{ margin-bottom:12px; }
+  .ex-title{ font-size:17px; font-weight:600; }
+  .ex-sub{ font-size:14px; color:var(--ink-soft); }
+  .example .log li{ background:var(--paper); border-color:transparent; }
+
+  /* print: 나의 실험 기록만 인쇄 */
+  .print-head{ display:none; }
+  @media print{
+    @page{ margin:14mm; }
+    body{ background:#fff; font-size:12pt; }
+    .app{ max-width:none; padding:0; }
+    .top, #exampleCard, #cardSet, #cardPredict, #cardGraph, #cardExplain,
+    #cardLog .btn-row, #cardLog .lead, footer, .toast{ display:none !important; }
+    .card{ border:0; padding:0; margin:0; }
+    .print-head{ display:block; margin-bottom:10px; padding-bottom:8px; border-bottom:1.5px solid var(--ink); }
+    .print-head .p-title{ margin:0; font-size:16pt; font-weight:600; }
+    .print-head .p-meta{ margin:6px 0 0; display:flex; justify-content:space-between; font-size:11pt; }
+    .log li{ break-inside:avoid; page-break-inside:avoid; }
+    .log .explain, .tag, .cell{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+
+  @media (min-width:600px){
+    .top h1{ font-size:30px; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{ scroll-behavior:auto; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <p class="eyebrow">이차함수 · 그래프의 평행이동 · sunsky 선생님</p>
+    <h1>포물선 이동 실험실</h1>
+    <p class="sub"><span class="m"><i>y</i> = (<i>x</i> − <i>h</i>)<sup>2</sup> + <i>k</i></span> 의 그래프를 보기 전에 먼저 예측하고, 확인한 뒤 내 생각을 어떻게 고쳤는지 기록해요. 점수는 없어요.</p>
+    <ol class="steps" aria-label="실험 단계">
+      <li id="st1">① 식 정하기</li>
+      <li id="st2">② 예측하기</li>
+      <li id="st3">③ 확인·설명하기</li>
+    </ol>
+  </header>
+
+  <main>
+    <!-- 완성 예시 -->
+    <details class="card example" id="exampleCard">
+      <summary>
+        <span class="ex-title">완성 예시 보기</span>
+        <span class="ex-sub">sunsky의 실험 2회 · 예측 → 관찰 → 설명</span>
+      </summary>
+      <p class="lead">첫 실험에서는 좌우 방향을 반대로 예측했고, 설명을 쓰며 생각을 고친 뒤 두 번째 실험에서 확인했어요. 이렇게 <b>무엇을 어떻게 고쳤는지</b> 남기면 돼요.</p>
+      <div class="flow" id="exFlow"></div>
+      <ol class="log" id="exLog" reversed></ol>
+      <p class="hint">예시는 읽기 전용이에요. 아래 ① 식 정하기에서 나만의 새 실험을 시작하세요.</p>
+    </details>
+
+    <!-- ① 조작 -->
+    <section class="card" id="cardSet" aria-labelledby="hSet">
+      <h2 id="hSet"><span class="no">1</span>식 정하기</h2>
+      <p class="lead">슬라이더로 <i>h</i>와 <i>k</i>를 골라 식을 만들어요.</p>
+      <div class="eq" id="eqText" aria-live="polite"></div>
+      <div class="slider">
+        <div class="slider-head"><label for="hIn"><i>h</i> 값</label><output id="hOut" for="hIn"></output></div>
+        <input type="range" id="hIn" min="-5" max="5" step="1" value="2">
+        <div class="ticks" aria-hidden="true"><span>−5</span><span>0</span><span>5</span></div>
+      </div>
+      <div class="slider">
+        <div class="slider-head"><label for="kIn"><i>k</i> 값</label><output id="kOut" for="kIn"></output></div>
+        <input type="range" id="kIn" min="-5" max="5" step="1" value="-3">
+        <div class="ticks" aria-hidden="true"><span>−5</span><span>0</span><span>5</span></div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-small" id="randBtn">무작위로 정하기</button>
+      <p class="hint" id="lockHint" hidden>h나 k를 바꾸면 지금 실험이 기록되고, 그래프가 다시 가려진 뒤 새 예측을 받아요.</p>
+    </section>
+
+    <!-- ② 예측 -->
+    <section class="card" id="cardPredict" aria-labelledby="hPredict">
+      <h2 id="hPredict"><span class="no">2</span>그래프를 보기 전에 예측하기</h2>
+      <p class="lead">기준 그래프 <span class="m"><i>y</i> = <i>x</i><sup>2</sup></span>의 꼭짓점은 <span class="m">(0, 0)</span>이에요. 위 식의 그래프는 어디로 옮겨질까요?</p>
+
+      <p class="q" id="qVertex">꼭짓점의 위치</p>
+      <div class="vertex-in" role="group" aria-labelledby="qVertex">
+        <span aria-hidden="true">(</span>
+        <span class="stepper">
+          <button type="button" data-step="px" data-d="-1" aria-label="x좌표 1 줄이기">−</button>
+          <input type="number" id="px" step="any" min="-8" max="8" placeholder="?" aria-label="예측한 꼭짓점의 x좌표">
+          <button type="button" data-step="px" data-d="1" aria-label="x좌표 1 늘리기">+</button>
+        </span>
+        <span aria-hidden="true">,</span>
+        <span class="stepper">
+          <button type="button" data-step="py" data-d="-1" aria-label="y좌표 1 줄이기">−</button>
+          <input type="number" id="py" step="any" min="-8" max="8" placeholder="?" aria-label="예측한 꼭짓점의 y좌표">
+          <button type="button" data-step="py" data-d="1" aria-label="y좌표 1 늘리기">+</button>
+        </span>
+        <span aria-hidden="true">)</span>
+      </div>
+
+      <fieldset class="seg">
+        <legend><span class="m"><i>y</i> = <i>x</i><sup>2</sup></span>에서 좌우로는?</legend>
+        <div class="seg-opts">
+          <label class="seg-opt"><input type="radio" name="hd" value="left"><span>왼쪽으로</span></label>
+          <label class="seg-opt"><input type="radio" name="hd" value="none"><span>움직이지 않음</span></label>
+          <label class="seg-opt"><input type="radio" name="hd" value="right"><span>오른쪽으로</span></label>
+        </div>
+      </fieldset>
+      <fieldset class="seg">
+        <legend>위아래로는?</legend>
+        <div class="seg-opts">
+          <label class="seg-opt"><input type="radio" name="vd" value="up"><span>위로</span></label>
+          <label class="seg-opt"><input type="radio" name="vd" value="none"><span>움직이지 않음</span></label>
+          <label class="seg-opt"><input type="radio" name="vd" value="down"><span>아래로</span></label>
+        </div>
+      </fieldset>
+
+      <label class="field-label" for="why">이렇게 예측한 이유 <small>(선택)</small></label>
+      <textarea id="why" placeholder="예: x − h 에서 h가 2니까 …"></textarea>
+
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" id="revealBtn" disabled>그래프 확인하기</button>
+      </div>
+      <p class="hint" id="predHint" aria-live="polite">꼭짓점과 두 방향을 모두 정하면 그래프를 볼 수 있어요.</p>
+    </section>
+
+    <!-- 그래프 -->
+    <section class="card" id="cardGraph" aria-labelledby="hGraph">
+      <h2 id="hGraph" class="sr-only">그래프</h2>
+      <div class="graph-wrap">
+        <svg class="graph" id="graph" viewBox="0 0 360 360" role="img" aria-labelledby="graphDesc">
+          <desc id="graphDesc"></desc>
+        </svg>
+      </div>
+      <ul class="legend" id="legend"></ul>
+    </section>
+
+    <!-- ③ 확인·설명 -->
+    <section class="card" id="cardExplain" aria-labelledby="hExplain" hidden>
+      <h2 id="hExplain" tabindex="-1"><span class="no">3</span>예측과 그래프 비교하기</h2>
+      <table class="compare" id="compare"></table>
+      <p class="q">관찰: 꼭짓점 주변의 함수값</p>
+      <table class="compare values" id="values"></table>
+      <div class="notes" id="notes"></div>
+
+      <p class="q">무엇이 달랐나요? <small style="font-weight:400;color:var(--ink-soft)">(여러 개 골라도 돼요)</small></p>
+      <div class="chips" id="chips"></div>
+
+      <label class="field-label" for="explain" id="explainLabel"></label>
+      <textarea id="explain"></textarea>
+      <p class="hint" id="explainHint" aria-live="polite"></p>
+
+      <div class="btn-row">
+        <button type="button" class="btn btn-violet" id="saveBtn" disabled>기록하고 새 식 만들기</button>
+        <button type="button" class="btn btn-ghost" id="saveSimilarBtn" disabled hidden>기록하고 비슷한 식으로 다시 예측</button>
+      </div>
+    </section>
+
+    <!-- 기록 -->
+    <section class="card" id="cardLog" aria-labelledby="hLog">
+      <div class="print-head" aria-hidden="true">
+        <p class="p-title">포물선 이동 실험 기록 — <span class="m"><i>y</i> = (<i>x</i> − <i>h</i>)<sup>2</sup> + <i>k</i></span></p>
+        <p class="p-meta"><span>이름: ____________________</span><span id="printDate"></span></p>
+      </div>
+      <h2 id="hLog">나의 예측 수정 기록</h2>
+      <p class="lead">실험마다 처음 예측이 그래프와 같았는지, 다음 실험에서 생각이 어떻게 바뀌었는지 모아 봐요.</p>
+      <div class="flow" id="flow"></div>
+      <ol class="log" id="log" reversed></ol>
+      <div class="btn-row" id="logBtns" hidden>
+        <button type="button" class="btn btn-ghost btn-small" id="printBtn">기록 인쇄하기</button>
+        <button type="button" class="btn btn-ghost btn-small" id="copyBtn">기록 복사하기</button>
+        <button type="button" class="btn btn-ghost btn-small" id="clearBtn">기록 지우기</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>만든 사람: sunsky</footer>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+  'use strict';
+
+  const STORE_KEY = 'week3-parabola-lab-v1';
+  const $ = id => document.getElementById(id);
+
+  const state = {
+    phase:'predict',        // 'predict' | 'reveal'
+    h:2, k:-3,
+    log:[]
+  };
+
+  /* ---------- 형식 ---------- */
+  const MINUS = '−';
+  const num = n => (n < 0 ? MINUS + Math.abs(n) : String(n));
+  function eqHTML(h, k){
+    let s = '<i>y</i> = ';
+    s += h === 0 ? '<i>x</i><sup>2</sup>'
+                 : '(<i>x</i> ' + (h > 0 ? MINUS : '+') + ' ' + Math.abs(h) + ')<sup>2</sup>';
+    if (k !== 0) s += ' ' + (k > 0 ? '+' : MINUS) + ' ' + Math.abs(k);
+    return s;
+  }
+  function eqText(h, k){ return eqHTML(h, k).replace(/<sup>2<\/sup>/g, '²').replace(/<[^>]+>/g, ''); }
+  const hdOf = h => (h > 0 ? 'right' : h < 0 ? 'left' : 'none');
+  const vdOf = k => (k > 0 ? 'up' : k < 0 ? 'down' : 'none');
+  const DIR = { left:'왼쪽', right:'오른쪽', up:'위', down:'아래', none:'움직이지 않음' };
+  // 꼭짓점 x = h 좌우로 두 칸씩, 대칭을 볼 수 있는 다섯 점
+  const valuesAround = (h, k) => [-2, -1, 0, 1, 2].map(d => [h + d, d * d + k]);
+  function moveText(h, k){
+    const a = [];
+    if (h) a.push((h > 0 ? '오른쪽으로 ' : '왼쪽으로 ') + Math.abs(h));
+    if (k) a.push((k > 0 ? '위로 ' : '아래로 ') + Math.abs(k));
+    return a.length ? a.join(', ') : '움직이지 않음';
+  }
+
+  /* ---------- 저장 ---------- */
+  function save(){
+    try { sessionStorage.setItem(STORE_KEY, JSON.stringify({ log: state.log })); } catch (e) { /* ignore */ }
+  }
+  function load(){
+    try {
+      const s = JSON.parse(sessionStorage.getItem(STORE_KEY));
+      if (s && Array.isArray(s.log)) state.log = s.log;
+    } catch (e) { /* ignore */ }
+  }
+
+  /* ---------- 예측 읽기 ---------- */
+  function readNum(id){
+    const v = $(id).value.trim();
+    if (v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  function readRadio(name){
+    const el = document.querySelector('input[name="' + name + '"]:checked');
+    return el ? el.value : null;
+  }
+  function readPred(){
+    return { x: readNum('px'), y: readNum('py'), hd: readRadio('hd'), vd: readRadio('vd'), why: $('why').value.trim() };
+  }
+  const predComplete = p => p.x !== null && p.y !== null && p.hd && p.vd;
+
+  /* ---------- 그래프 ---------- */
+  const XMIN = -8, XMAX = 8, YMIN = -7, YMAX = 9, S = 360 / (XMAX - XMIN);
+  const X = x => (x - XMIN) * S;
+  const Y = y => (YMAX - y) * S;
+  const NS = 'http://www.w3.org/2000/svg';
+
+  function el(tag, attrs, parent){
+    const e = document.createElementNS(NS, tag);
+    for (const a in attrs) e.setAttribute(a, attrs[a]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function txt(parent, x, y, s, attrs){
+    const t = el('text', Object.assign({ x, y }, attrs || {}), parent);
+    t.textContent = s;
+    return t;
+  }
+  function parabolaPath(h, k){
+    let d = '';
+    for (let i = 0; i <= 320; i++){
+      const x = XMIN + (XMAX - XMIN) * i / 320;
+      const y = (x - h) * (x - h) + k;
+      const yy = Math.max(YMIN - 20, Math.min(YMAX + 20, y));
+      d += (i ? 'L' : 'M') + X(x).toFixed(2) + ' ' + Y(yy).toFixed(2);
+    }
+    return d;
+  }
+
+  function drawGraph(){
+    const svg = $('graph');
+    const desc = $('graphDesc');
+    [...svg.childNodes].forEach(n => { if (n !== desc) svg.removeChild(n); });
+
+    const cs = getComputedStyle(document.documentElement);
+    const C = name => cs.getPropertyValue(name).trim();
+
+    const defs = el('defs', {}, svg);
+    const clip = el('clipPath', { id:'plot' }, defs);
+    el('rect', { x:0, y:0, width:360, height:360 }, clip);
+    const mk = el('marker', { id:'arrow', viewBox:'0 0 10 10', refX:8, refY:5, markerWidth:6, markerHeight:6, orient:'auto-start-reverse' }, defs);
+    el('path', { d:'M0 0L10 5L0 10z', fill:C('--amber') }, mk);
+
+    // grid
+    const g = el('g', {}, svg);
+    for (let x = XMIN; x <= XMAX; x++) el('line', { x1:X(x), y1:0, x2:X(x), y2:360, stroke:C('--grid'), 'stroke-width':1 }, g);
+    for (let y = YMIN; y <= YMAX; y++) el('line', { x1:0, y1:Y(y), x2:360, y2:Y(y), stroke:C('--grid'), 'stroke-width':1 }, g);
+    el('line', { x1:0, y1:Y(0), x2:360, y2:Y(0), stroke:C('--ink-soft'), 'stroke-width':1.3 }, g);
+    el('line', { x1:X(0), y1:0, x2:X(0), y2:360, stroke:C('--ink-soft'), 'stroke-width':1.3 }, g);
+    for (let x = -6; x <= 6; x += 2){
+      if (x) txt(g, X(x), Y(0) + 14, num(x), { 'font-size':10.5, fill:C('--ink-soft'), 'text-anchor':'middle' });
+    }
+    for (let y = -6; y <= 8; y += 2){
+      if (y) txt(g, X(0) - 5, Y(y) + 4, num(y), { 'font-size':10.5, fill:C('--ink-soft'), 'text-anchor':'end' });
+    }
+    txt(g, 352, Y(0) - 6, 'x', { 'font-size':13, 'font-style':'italic', fill:C('--ink-soft'), 'text-anchor':'end', 'font-family':'serif' });
+    txt(g, X(0) + 6, 13, 'y', { 'font-size':13, 'font-style':'italic', fill:C('--ink-soft'), 'font-family':'serif' });
+
+    const plot = el('g', { 'clip-path':'url(#plot)' }, svg);
+    const top = el('g', {}, svg);
+
+    // 기준 그래프 y = x²
+    el('path', { d:parabolaPath(0, 0), fill:'none', stroke:C('--base'), 'stroke-width':2.2, 'stroke-dasharray':'6 5' }, plot);
+    el('circle', { cx:X(0), cy:Y(0), r:4, fill:C('--base') }, plot);
+
+    const p = readPred();
+    const hasPoint = p.x !== null && p.y !== null;
+    const revealed = state.phase === 'reveal';
+    const h = state.h, k = state.k;
+    const legend = [];
+    legend.push(['base', '기준 그래프 y = x²']);
+
+    // 예측 (보라 점선 + 빈 원)
+    if (hasPoint){
+      el('path', { d:parabolaPath(p.x, p.y), fill:'none', stroke:C('--violet-fill'), 'stroke-width':1.8, 'stroke-dasharray':'2 5', 'stroke-linecap':'round', opacity:.85 }, plot);
+    }
+
+    if (revealed){
+      // 대칭축 x = h
+      el('line', { x1:X(h), y1:0, x2:X(h), y2:360, stroke:C('--blue-fill'), 'stroke-width':1.6, 'stroke-dasharray':'8 5' }, plot);
+      const axLabel = 'x = ' + num(h);
+      const axRight = h < 5;
+      txt(top, X(h) + (axRight ? 6 : -6), 16, axLabel, { 'font-size':13, 'font-weight':600, fill:C('--blue'), 'text-anchor':axRight ? 'start' : 'end', 'paint-order':'stroke', stroke:'#fff', 'stroke-width':4 });
+
+      // 실제 그래프
+      el('path', { d:parabolaPath(h, k), fill:'none', stroke:C('--blue-fill'), 'stroke-width':3 }, plot);
+
+      // 이동 화살표 (0,0) → (h,0) → (h,k)
+      if (h) el('line', { x1:X(0), y1:Y(0), x2:X(h), y2:Y(0), stroke:C('--amber'), 'stroke-width':3, 'marker-end':'url(#arrow)' }, plot);
+      if (k) el('line', { x1:X(h), y1:Y(0), x2:X(h), y2:Y(k), stroke:C('--amber'), 'stroke-width':3, 'marker-end':'url(#arrow)' }, plot);
+
+      // 관찰한 함수값 위치
+      valuesAround(h, k).forEach(([x, y]) => {
+        if (x !== h) el('circle', { cx:X(x), cy:Y(y), r:3.5, fill:C('--surface'), stroke:C('--blue-fill'), 'stroke-width':2 }, plot);
+      });
+
+      // 꼭짓점
+      el('circle', { cx:X(h), cy:Y(k), r:6, fill:C('--blue-fill'), stroke:'#fff', 'stroke-width':2 }, top);
+      const lbl = '(' + num(h) + ', ' + num(k) + ')';
+      const below = Y(k) + 24 < 356;
+      const lx = Math.max(30, Math.min(330, X(h)));
+      const t = txt(top, lx, below ? Y(k) + 24 : Y(k) - 14, lbl, { 'font-size':14, 'font-weight':700, fill:C('--blue'), 'text-anchor':'middle' });
+      t.setAttribute('paint-order', 'stroke');
+      t.setAttribute('stroke', '#fff');
+      t.setAttribute('stroke-width', 4);
+
+      legend.push(['actual', '실제 그래프 ' + eqText(h, k)]);
+      legend.push(['vertex', '꼭짓점 (h, k)']);
+      legend.push(['axis', '대칭축 x = h']);
+      if (h || k) legend.push(['arrow', '꼭짓점의 이동']);
+    } else {
+      const box = el('g', {}, top);
+      el('rect', { x:10, y:10, width:196, height:26, rx:8, fill:C('--paper'), stroke:C('--line') }, box);
+      txt(box, 20, 28, '실제 그래프는 예측 후에 나타나요', { 'font-size':12.5, fill:C('--ink-soft') });
+    }
+
+    if (hasPoint){
+      el('circle', { cx:X(p.x), cy:Y(p.y), r:7.5, fill:'none', stroke:C('--violet-fill'), 'stroke-width':2.6 }, top);
+      const same = revealed && p.x === h && p.y === k;
+      if (!same){
+        const ly = Y(p.y) - 13 > 44 ? Y(p.y) - 13 : Y(p.y) + 24;
+        const t = txt(top, Math.max(30, Math.min(330, X(p.x))), ly, '내 예측', { 'font-size':12.5, 'font-weight':600, fill:C('--violet'), 'text-anchor':'middle' });
+        t.setAttribute('paint-order', 'stroke');
+        t.setAttribute('stroke', '#fff');
+        t.setAttribute('stroke-width', 4);
+      }
+      legend.push(['pred', '내 예측 꼭짓점과 그래프']);
+    }
+
+    // 설명
+    let d = '좌표평면. 기준 그래프 y = x²가 점선으로 그려져 있어요.';
+    if (hasPoint) d += ' 내가 예측한 꼭짓점은 (' + num(p.x) + ', ' + num(p.y) + ')이에요.';
+    if (revealed) d += ' 실제 그래프 ' + eqText(h, k) + '의 꼭짓점은 (' + num(h) + ', ' + num(k) + '), 대칭축은 x = ' + num(h) + '이에요. 기준 그래프에서 ' + moveText(h, k) + ' 옮겨졌어요.';
+    else d += ' 실제 그래프는 아직 가려져 있어요.';
+    desc.textContent = d;
+
+    drawLegend(legend, C);
+  }
+
+  function drawLegend(items, C){
+    const ul = $('legend');
+    ul.innerHTML = '';
+    const sw = {
+      base:   '<line x1="2" y1="7" x2="24" y2="7" stroke="' + C('--base') + '" stroke-width="2.2" stroke-dasharray="6 4"/>',
+      actual: '<line x1="2" y1="7" x2="24" y2="7" stroke="' + C('--blue-fill') + '" stroke-width="3"/>',
+      vertex: '<circle cx="13" cy="7" r="5" fill="' + C('--blue-fill') + '"/>',
+      axis:   '<line x1="13" y1="0" x2="13" y2="14" stroke="' + C('--blue-fill') + '" stroke-width="1.6" stroke-dasharray="4 3"/>',
+      arrow:  '<line x1="2" y1="7" x2="20" y2="7" stroke="' + C('--amber') + '" stroke-width="3"/><path d="M18 2L25 7L18 12z" fill="' + C('--amber') + '"/>',
+      pred:   '<circle cx="13" cy="7" r="5" fill="none" stroke="' + C('--violet-fill') + '" stroke-width="2.2"/>'
+    };
+    items.forEach(([key, label]) => {
+      const li = document.createElement('li');
+      li.innerHTML = '<svg width="26" height="14" viewBox="0 0 26 14" aria-hidden="true">' + sw[key] + '</svg>';
+      li.appendChild(document.createTextNode(label));
+      ul.appendChild(li);
+    });
+  }
+
+  /* ---------- 비교와 관찰 ---------- */
+  function compareOf(p, h, k){
+    return {
+      x: p.x === h,
+      y: p.y === k,
+      hd: p.hd === hdOf(h),
+      vd: p.vd === vdOf(k)
+    };
+  }
+
+  // 흔히 보이는 생각을 찾아 '질문'으로 돌려준다. 정답을 대신 말해 주지 않는다.
+  function observe(p, h, k){
+    const notes = [];
+    const tags = new Set();
+    const m = compareOf(p, h, k);
+
+    if (m.x && m.y && m.hd && m.vd){
+      notes.push('<b>처음 예측이 그래프와 같았어요.</b> 어떻게 알았는지 나만의 말로 설명해 두면, 다음 실험에서 그 생각을 다시 확인해 볼 수 있어요.');
+      return { notes, tags };
+    }
+
+    const swapped = h !== k && p.x === k && p.y === h;
+    if (swapped){
+      notes.push('<b>x좌표와 y좌표가 서로 바뀐 것 같아요.</b> 식에서 <i>h</i>와 <i>k</i>는 각각 어느 쪽 이동에 관련될까요?');
+      tags.add('swap');
+    }
+    if (!swapped && h !== 0 && p.x === -h){
+      notes.push('<b>좌우 위치가 반대쪽이에요.</b> <span class="m">(<i>x</i> − ' + (h > 0 ? h : '(' + num(h) + ')') + ')<sup>2</sup></span>이 0이 되는 <i>x</i>는 무엇일까요?');
+      tags.add('hsign');
+    } else if (!swapped && !m.x){
+      notes.push('<b>꼭짓점의 x좌표가 달라요.</b> 그래프에서 대칭축이 지나는 곳을 살펴보세요.');
+      tags.add(p.x !== null && Math.sign(p.x) === Math.sign(h) ? 'dist' : 'hsign');
+    }
+    if (!swapped && k !== 0 && p.y === -k){
+      notes.push('<b>위아래 위치가 반대쪽이에요.</b> 식 끝에 더해진 수 ' + num(k) + '는 모든 <i>y</i>값을 어떻게 바꿀까요?');
+      tags.add('ksign');
+    } else if (!swapped && !m.y){
+      notes.push('<b>꼭짓점의 y좌표가 달라요.</b>');
+      tags.add(p.y !== null && Math.sign(p.y) === Math.sign(k) ? 'dist' : 'ksign');
+    }
+    if (m.x && !m.hd){ notes.push('<b>꼭짓점 x좌표는 같았지만 좌우 방향은 다르게 골랐어요.</b>'); }
+    if (m.y && !m.vd){ notes.push('<b>꼭짓점 y좌표는 같았지만 위아래 방향은 다르게 골랐어요.</b>'); }
+    if (hdOf(p.x) !== p.hd || vdOf(p.y) !== p.vd){
+      notes.push('<b>내가 쓴 꼭짓점과 내가 고른 방향이 서로 맞지 않았어요.</b> (0, 0)에서 (' + num(p.x) + ', ' + num(p.y) + ')로 가려면 어느 쪽으로 움직여야 할까요?');
+      tags.add('inconsistent');
+    }
+    return { notes, tags };
+  }
+
+  const CHIP_DEFS = [
+    ['hsign', '좌우 방향(h의 부호)'],
+    ['ksign', '위아래 방향(k의 부호)'],
+    ['swap', 'x좌표와 y좌표를 바꿈'],
+    ['dist', '이동한 거리'],
+    ['inconsistent', '꼭짓점과 방향이 서로 안 맞음'],
+    ['none', '다른 점 없음']
+  ];
+  const CHIP_LABEL = Object.fromEntries(CHIP_DEFS);
+
+  function renderExplain(){
+    const p = readPred(), h = state.h, k = state.k;
+    const m = compareOf(p, h, k);
+    const allSame = m.x && m.y && m.hd && m.vd;
+    const tag = ok => '<span class="tag ' + (ok ? 'tag-same">같음' : 'tag-diff">다름') + '</span>';
+
+    $('compare').innerHTML =
+      '<caption class="sr-only">내 예측과 실제 그래프 비교</caption>' +
+      '<thead><tr><th scope="col">항목</th><th scope="col">내 예측</th><th scope="col">그래프</th><th scope="col"></th></tr></thead><tbody>' +
+      '<tr><th scope="row">꼭짓점</th><td class="pv">(' + num(p.x) + ', ' + num(p.y) + ')</td><td class="av">(' + num(h) + ', ' + num(k) + ')</td><td>' + tag(m.x && m.y) + '</td></tr>' +
+      '<tr><th scope="row">좌우 이동</th><td class="pv">' + DIR[p.hd] + '</td><td class="av">' + DIR[hdOf(h)] + (h ? ' ' + Math.abs(h) : '') + '</td><td>' + tag(m.hd) + '</td></tr>' +
+      '<tr><th scope="row">위아래 이동</th><td class="pv">' + DIR[p.vd] + '</td><td class="av">' + DIR[vdOf(k)] + (k ? ' ' + Math.abs(k) : '') + '</td><td>' + tag(m.vd) + '</td></tr>' +
+      '<tr><th scope="row">대칭축</th><td class="pv">x = ' + num(p.x) + '</td><td class="av">x = ' + num(h) + '</td><td>' + tag(m.x) + '</td></tr>' +
+      '</tbody>';
+
+    const ob = observe(p, h, k);
+    const vals = valuesAround(h, k);
+    $('values').innerHTML =
+      '<caption class="sr-only">꼭짓점 주변의 x와 y값</caption><tbody>' +
+      '<tr><th scope="row">x</th>' + vals.map(([x]) => '<td' + (x === h ? ' class="v0"' : '') + '>' + num(x) + '</td>').join('') + '</tr>' +
+      '<tr><th scope="row">y</th>' + vals.map(([x, y]) => '<td' + (x === h ? ' class="v0"' : '') + '>' + num(y) + '</td>').join('') + '</tr>' +
+      '</tbody>';
+
+    $('notes').innerHTML = ob.notes.map(n => '<p>' + n + '</p>').join('');
+
+    const chips = $('chips');
+    chips.innerHTML = '';
+    CHIP_DEFS.forEach(([key, label]) => {
+      const lab = document.createElement('label');
+      lab.className = 'chip' + (ob.tags.has(key) ? ' is-suggested' : '');
+      lab.innerHTML = '<input type="checkbox" name="tag" value="' + key + '"><span></span>';
+      lab.querySelector('span').textContent = label;
+      if (allSame && key === 'none') lab.querySelector('input').checked = true;
+      chips.appendChild(lab);
+    });
+    if (ob.tags.size){
+      const n = document.createElement('p');
+      n.className = 'hint';
+      n.style.margin = '0';
+      n.style.flexBasis = '100%';
+      n.textContent = '• 표시는 비교 결과로 짐작한 것이에요. 내 생각과 맞는 것을 직접 골라 주세요.';
+      chips.appendChild(n);
+    }
+
+    $('explainLabel').innerHTML = allSame
+      ? '어떻게 예측했는지 설명해 보세요 <small>(필수)</small>'
+      : '처음 생각에서 무엇을, 어떻게 고쳤나요? <small>(필수)</small>';
+    $('explain').placeholder = allSame
+      ? '예: (x − h)²은 x = h일 때 0이 되니까 …'
+      : '처음에는 … 라고 생각했는데, 그래프를 보니 … 그래서 이제는 … 라고 생각해요.';
+    $('explain').value = '';
+    $('saveSimilarBtn').hidden = allSame;
+    updateSaveBtns();
+  }
+
+  function updateSaveBtns(){
+    const ok = $('explain').value.trim().length >= 5 && document.querySelector('input[name="tag"]:checked');
+    $('saveBtn').disabled = !ok;
+    $('saveSimilarBtn').disabled = !ok;
+    $('explainHint').textContent = ok ? '' : '달라진 점을 하나 이상 고르고, 설명을 한두 문장 써 주세요.';
+  }
+
+  /* ---------- 기록 ---------- */
+  function aspectMatches(e){
+    return { lr: e.match.x && e.match.hd, ud: e.match.y && e.match.vd };
+  }
+
+  function flowNote(label, seq){
+    if (!seq.length) return '';
+    const lastDiff = seq.lastIndexOf(false);
+    if (lastDiff === -1) return label + ': 모든 실험에서 처음 예측이 그래프와 같았어요.';
+    const after = seq.length - 1 - lastDiff;
+    if (after === 0) return label + ': 실험 ' + (lastDiff + 1) + '에서 생각을 고쳤어요. 다음 실험에서 고친 생각을 확인해 보세요.';
+    return label + ': 실험 ' + (lastDiff + 1) + '에서 생각을 고친 뒤, 이어진 ' + after + '번의 실험에서 예측이 그래프와 같았어요.';
+  }
+
+  function renderLog(){
+    $('logBtns').hidden = !state.log.length;
+    renderRecords(state.log, $('flow'), $('log'));
+  }
+
+  function renderRecords(log, flow, list){
+    list.innerHTML = '';
+    flow.innerHTML = '';
+
+    if (!log.length){
+      list.innerHTML = '<li style="border:0;padding:0"><p class="empty">아직 기록이 없어요. 첫 실험을 해 보세요.</p></li>';
+      return;
+    }
+
+    const seqLR = log.map(e => aspectMatches(e).lr);
+    const seqUD = log.map(e => aspectMatches(e).ud);
+    const row = (label, seq) =>
+      '<div class="flow-row"><span class="lbl">' + label + '</span><span class="flow-cells">' +
+      seq.map((ok, i) => '<span class="cell ' + (ok ? 'same' : 'diff') + '" title="실험 ' + (i + 1) + ': ' + (ok ? '같음' : '다름') + '">' + (i + 1) + '</span>').join('') +
+      '</span></div>';
+    flow.innerHTML =
+      row('좌우', seqLR) + row('위아래', seqUD) +
+      '<p class="flow-note">' + flowNote('좌우', seqLR) + '</p>' +
+      '<p class="flow-note">' + flowNote('위아래', seqUD) + '</p>' +
+      '<p class="flow-note" style="font-size:13px">네모 안의 숫자는 실험 번호예요. 테두리가 있는 칸은 처음 예측이 그래프와 달라서 생각을 고친 실험이에요.</p>';
+
+    log.slice().reverse().forEach(e => {
+      const li = document.createElement('li');
+      const same = e.match.x && e.match.y && e.match.hd && e.match.vd;
+      li.innerHTML =
+        '<div class="head"><span class="m">' + eqHTML(e.h, e.k) + '</span><b>실험 ' + e.n + '</b></div>' +
+        '<p><span class="k">예측</span>꼭짓점 (' + num(e.pred.x) + ', ' + num(e.pred.y) + '), ' + DIR[e.pred.hd] + ' · ' + DIR[e.pred.vd] + ' ' +
+          '<span class="tag ' + (same ? 'tag-same">그래프와 같음' : 'tag-diff">그래프와 다름') + '</span></p>' +
+        '<p class="why-line"></p>' +
+        '<p><span class="k">관찰</span>' + obsText(e.h, e.k) + '</p>' +
+        (e.tags.length ? '<p><span class="k">달랐던 점</span>' + e.tags.map(t => CHIP_LABEL[t]).join(', ') + '</p>' : '') +
+        '<p class="explain"></p>';
+      const why = li.querySelector('.why-line');
+      if (e.pred.why){ why.innerHTML = '<span class="k">예측 이유</span>'; why.appendChild(document.createTextNode(e.pred.why)); }
+      else why.remove();
+      const ex = li.querySelector('.explain');
+      if (e.explain){
+        ex.innerHTML = '<span class="k">' + (same ? '설명' : '고친 생각') + '</span>';
+        ex.appendChild(document.createTextNode(e.explain));
+      } else {
+        ex.classList.add('is-missing');
+        ex.innerHTML = '<span class="k">설명</span>설명을 쓰기 전에 조건을 바꿨어요.';
+      }
+      list.appendChild(li);
+    });
+  }
+
+  function obsText(h, k){
+    const v = valuesAround(h, k);
+    return '꼭짓점 (' + num(h) + ', ' + num(k) + '), 대칭축 x = ' + num(h) + ', ' + moveText(h, k) + ' 이동 · ' +
+      'x = ' + v.map(([x]) => num(x)).join(', ') + '일 때 y = ' + v.map(([, y]) => num(y)).join(', ');
+  }
+
+  function logAsText(){
+    return state.log.map(e => {
+      const same = e.match.x && e.match.y && e.match.hd && e.match.vd;
+      const lines = [
+        '[실험 ' + e.n + '] ' + eqText(e.h, e.k),
+        '  예측: 꼭짓점 (' + num(e.pred.x) + ', ' + num(e.pred.y) + '), ' + DIR[e.pred.hd] + ' / ' + DIR[e.pred.vd] + (same ? ' → 그래프와 같음' : ' → 그래프와 다름'),
+      ];
+      if (e.pred.why) lines.push('  예측 이유: ' + e.pred.why);
+      lines.push('  관찰: ' + obsText(e.h, e.k));
+      if (e.tags.length) lines.push('  달랐던 점: ' + e.tags.map(t => CHIP_LABEL[t]).join(', '));
+      lines.push('  ' + (same ? '설명' : '고친 생각') + ': ' + (e.explain || '(설명을 쓰기 전에 조건을 바꿨어요)'));
+      return lines.join('\n');
+    }).join('\n\n');
+  }
+
+  /* ---------- 화면 상태 ---------- */
+  function renderSet(){
+    const h = state.h, k = state.k;
+    $('hIn').value = h; $('kIn').value = k;
+    $('hOut').textContent = num(h);
+    $('kOut').textContent = num(k);
+    $('hIn').setAttribute('aria-valuetext', num(h));
+    $('kIn').setAttribute('aria-valuetext', num(k));
+    $('eqText').innerHTML = eqHTML(h, k);
+  }
+
+  function renderPhase(){
+    const reveal = state.phase === 'reveal';
+    document.querySelectorAll('#cardPredict input, #cardPredict textarea, #cardPredict button').forEach(e => { e.disabled = reveal; });
+    $('cardPredict').classList.toggle('is-locked', reveal);
+    $('lockHint').hidden = !reveal;
+    $('cardExplain').hidden = !reveal;
+    $('st1').classList.toggle('is-on', !reveal);
+    $('st2').classList.toggle('is-on', !reveal);
+    $('st3').classList.toggle('is-on', reveal);
+    if (!reveal) updateRevealBtn();
+  }
+
+  function updateRevealBtn(){
+    const ok = predComplete(readPred());
+    $('revealBtn').disabled = !ok;
+    $('predHint').textContent = ok ? '준비됐어요. 그래프를 확인해 보세요.' : '꼭짓점과 두 방향을 모두 정하면 그래프를 볼 수 있어요.';
+  }
+
+  function clearPred(){
+    $('px').value = ''; $('py').value = ''; $('why').value = '';
+    document.querySelectorAll('input[name="hd"], input[name="vd"]').forEach(r => { r.checked = false; });
+  }
+
+  let toastTimer = 0;
+  function toast(msg){
+    const t = $('toast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+  }
+
+  function randInt(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function randomHK(){
+    let h, k;
+    do { h = randInt(-5, 5); k = randInt(-5, 5); } while ((h === 0 && k === 0) || (h === state.h && k === state.k));
+    return [h, k];
+  }
+  // 같은 부호 조합을 유지해 고친 생각을 다시 시험해 볼 수 있게 한다.
+  function similarHK(){
+    const pick = s => (s === 0 ? 0 : s * randInt(1, 5));
+    const sh = Math.sign(state.h), sk = Math.sign(state.k);
+    let h, k, tries = 0;
+    do { h = pick(sh); k = pick(sk); tries++; } while (h === state.h && k === state.k && tries < 30);
+    return [h, k];
+  }
+
+  // 지금 조건(h, k)의 예측·관찰·설명을 한 실험으로 기록한다.
+  function record(){
+    const p = readPred();
+    const tags = [...document.querySelectorAll('input[name="tag"]:checked')].map(i => i.value);
+    const explain = $('explain').value.trim();
+    state.log.push({
+      n: state.log.length + 1,
+      h: state.h, k: state.k,
+      pred: { x:p.x, y:p.y, hd:p.hd, vd:p.vd, why:p.why },
+      match: compareOf(p, state.h, state.k),
+      tags,
+      explain
+    });
+    save();
+    return explain !== '';
+  }
+
+  // 그래프를 가리고 빈 예측 칸으로 돌아간다.
+  function startPredict(){
+    state.phase = 'predict';
+    clearPred();
+    renderSet();
+    renderPhase();
+    drawGraph();
+    renderLog();
+  }
+
+  function commit(next){
+    record();
+    if (next === 'similar'){ [state.h, state.k] = similarHK(); }
+    startPredict();
+    const target = next === 'similar' ? $('cardPredict') : $('cardSet');
+    target.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start' });
+    toast(next === 'similar'
+      ? '기록했어요. 비슷한 식으로 고친 생각을 확인해 보세요.'
+      : '기록했어요. h와 k를 바꿔 다음 실험을 해 보세요.');
+  }
+
+  /* ---------- 이벤트 ---------- */
+  // 조건이 바뀌면 이전 조건의 예측은 쓸 수 없으므로 그래프를 가리고 새 예측을 받는다.
+  function changeCondition(h, k){
+    if (h === state.h && k === state.k) return;
+    if (state.phase === 'reveal'){
+      const explained = record();
+      state.h = h; state.k = k;
+      startPredict();
+      toast(explained
+        ? '지난 실험을 기록했어요. 새 식의 그래프를 먼저 예측해 보세요.'
+        : '지난 실험을 설명 없이 기록했어요. 새 식의 그래프를 먼저 예측해 보세요.');
+      return;
+    }
+    const p = readPred();
+    const hadPred = p.x !== null || p.y !== null || p.hd || p.vd || p.why;
+    state.h = h; state.k = k;
+    renderSet();
+    if (hadPred){
+      clearPred();
+      drawGraph();
+      updateRevealBtn();
+      $('predHint').textContent = '식이 바뀌어서 예측을 비웠어요. 새 식으로 다시 예측해 보세요.';
+    }
+  }
+  const onSlider = () => changeCondition(Number($('hIn').value), Number($('kIn').value));
+  $('hIn').addEventListener('input', onSlider);
+  $('kIn').addEventListener('input', onSlider);
+  $('randBtn').addEventListener('click', () => { const [h, k] = randomHK(); changeCondition(h, k); });
+
+  document.querySelectorAll('[data-step]').forEach(b => {
+    b.addEventListener('click', () => {
+      const inp = $(b.dataset.step);
+      const cur = readNum(b.dataset.step) ?? 0;
+      const v = inp.value.trim() === '' ? 0 : Math.max(-8, Math.min(8, cur + Number(b.dataset.d)));
+      inp.value = v;
+      inp.dispatchEvent(new Event('input', { bubbles:true }));
+    });
+  });
+  $('cardPredict').addEventListener('input', () => { updateRevealBtn(); drawGraph(); });
+  $('cardPredict').addEventListener('change', () => { updateRevealBtn(); drawGraph(); });
+
+  $('revealBtn').addEventListener('click', () => {
+    if (!predComplete(readPred())) return;
+    state.phase = 'reveal';
+    renderPhase();
+    drawGraph();
+    renderExplain();
+    $('graph').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start' });
+  });
+
+  $('explain').addEventListener('input', updateSaveBtns);
+  $('chips').addEventListener('change', e => {
+    // '다른 점 없음'과 다른 항목은 함께 고를 수 없다.
+    if (e.target.name !== 'tag') return;
+    if (e.target.checked){
+      document.querySelectorAll('input[name="tag"]').forEach(i => {
+        if (i !== e.target && ((e.target.value === 'none') !== (i.value === 'none'))) i.checked = false;
+      });
+    }
+    updateSaveBtns();
+  });
+  $('saveBtn').addEventListener('click', () => commit('new'));
+  $('saveSimilarBtn').addEventListener('click', () => commit('similar'));
+
+  $('copyBtn').addEventListener('click', async () => {
+    const text = logAsText();
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('기록을 복사했어요.');
+    } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); toast('기록을 복사했어요.'); }
+      catch (e2) { toast('복사하지 못했어요. 기록을 직접 선택해 복사해 주세요.'); }
+      ta.remove();
+    }
+  });
+  $('clearBtn').addEventListener('click', () => {
+    if (!confirm('지금까지의 실험 기록을 모두 지울까요?')) return;
+    state.log = [];
+    save();
+    renderLog();
+  });
+
+  $('printBtn').addEventListener('click', () => {
+    const d = new Date();
+    $('printDate').textContent = '인쇄한 날: ' + d.getFullYear() + '. ' + (d.getMonth() + 1) + '. ' + d.getDate() + '.';
+    window.print();
+  });
+
+  /* ---------- 완성 예시 (sunsky, 읽기 전용) ---------- */
+  function exampleEntry(n, h, k, pred, tags, explain){
+    return { n, h, k, pred, match: compareOf(pred, h, k), tags, explain };
+  }
+  const EXAMPLE = [
+    exampleEntry(1, 2, -1,
+      { x:-2, y:-1, hd:'left', vd:'down', why:'식에 −2가 보여서 왼쪽으로 2만큼, −1이니까 아래로 1만큼 움직일 것 같았어요.' },
+      ['hsign'],
+      '처음에는 −2를 보고 왼쪽이라고 생각했는데, 그래프를 보니 꼭짓점이 (2, −1)이었어요. x = 2일 때 (x − 2)²이 0이 되어 y가 가장 작은 −1이 되고, x = 1과 3, 0과 4에서 값이 0, 3으로 같아요. 이제는 괄호 안을 0으로 만드는 x가 꼭짓점의 x좌표라고 생각해요.'),
+    exampleEntry(2, -1, 2,
+      { x:-1, y:2, hd:'left', vd:'up', why:'고친 생각대로 x + 1 = 0이 되는 x = −1을 찾았어요. +2는 모든 y값에 2를 더하니까 위로 2예요.' },
+      ['none'],
+      'x + 1은 x − (−1)이라서 h = −1이에요. 괄호 안이 0이 되는 x = −1이 대칭축이고, 그래프는 y = x²에서 왼쪽으로 1, 위로 2 이동했어요. x = −3, −2, −1, 0, 1일 때 y = 6, 3, 2, 3, 6으로 좌우가 같은 것도 확인했어요.')
+  ];
+
+  /* ---------- 시작 ---------- */
+  renderRecords(EXAMPLE, $('exFlow'), $('exLog'));
+  load();
+  renderSet();
+  renderPhase();
+  drawGraph();
+  renderLog();
+})();
+</script>
+</body>
+</html>
