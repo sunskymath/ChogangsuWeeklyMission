@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!--
+  배포 전 확인: 교사가 표현과 안내 문구를 최종 검토하세요.
+  - 이 파일 하나로 동작합니다(외부 요청은 Google Fonts뿐이며, 막혀도 기본 글꼴로 표시됩니다).
+  - 외부 AI API를 쓰지 않습니다. 모든 계산과 그림은 브라우저 안에서 만듭니다.
+  - 학생 이름·성적·연락처를 입력받지 않습니다. 별명·한 문장 설명·관찰 메모는
+    이 기기 브라우저(localStorage)에만 저장되며 어디로도 전송되지 않습니다.
+-->
+<meta name="description" content="원 위에 N개의 점을 놓고 i번 점을 (k×i) mod N번 점과 직선으로 이어 곡선처럼 보이는 작품을 만드는 나머지 연산 실험.">
+<meta name="theme-color" content="#3A55C7">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B0D1F'/%3E%3Ccircle cx='32' cy='32' r='24' stroke='%2389A2FF' stroke-width='3' fill='none'/%3E%3Cpath d='M56 32 L8 32 M44 52.8 L20 11.2 M44 11.2 L20 52.8' stroke='%23FFD54A' stroke-width='3'/%3E%3C/svg%3E">
+<title>곱셈 원 아트 — 나머지 연산</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1D1C33;
+    --ink-soft:#514E72;
+    --paper:#F4F4FB;
+    --surface:#FFFFFF;
+    --line:#E4E2F1;
+    --blue:#33499E;
+    --blue-fill:#3A55C7;
+    --blue-soft:#E9ECFB;
+    --violet:#5B3E9E;
+    --violet-fill:#6C48B8;
+    --violet-soft:#EFE8FA;
+    --amber:#8A4A05;
+    --amber-soft:#FBF0E1;
+    --red:#B3261E;
+    --red-soft:#FCEBEA;
+    --green:#1E6B3A;
+    --green-soft:#E6F4EA;
+    --radius:18px;
+    --font-display:'Gowun Batang', 'Nanum Myeongjo', serif;
+    --font-body:'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --font-math:'Cambria Math', 'STIX Two Math', 'Times New Roman', serif;
+  }
+  *{ box-sizing:border-box; }
+  [hidden]{ display:none !important; }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .app{ max-width:1120px; margin:0 auto; padding:12px 16px 40px; }
+  .sr-only{
+    position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+  button, input, textarea, select{ font-family:inherit; font-size:inherit; color:inherit; }
+  button{ touch-action:manipulation; }
+  :focus-visible{ outline:3px solid var(--violet-fill); outline-offset:2px; }
+
+  /* ---------- top ---------- */
+  .top{
+    background:linear-gradient(120deg, var(--blue-fill) 0%, var(--violet-fill) 100%);
+    color:#fff;
+    border-radius:22px;
+    padding:22px 22px 20px;
+    margin-bottom:16px;
+  }
+  .top .eyebrow{ margin:0; font-size:13px; letter-spacing:0.04em; opacity:0.9; }
+  .top h1{
+    font-family:var(--font-display); font-weight:700;
+    font-size:26px; line-height:1.3; margin:6px 0 8px;
+    text-wrap:balance; overflow-wrap:anywhere;
+  }
+  .top .sub{ margin:0; font-size:14.5px; color:rgba(255,255,255,0.92); }
+
+  /* ---------- layout ---------- */
+  .layout{ display:grid; grid-template-columns:1fr; gap:14px; }
+  @media (min-width:900px){
+    .layout{ grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); align-items:start; }
+    .art-col{ position:sticky; top:12px; }
+  }
+  .full{ margin-top:14px; }
+
+  /* ---------- cards ---------- */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px 18px 18px;
+    margin-bottom:14px;
+  }
+  .card:last-child{ margin-bottom:0; }
+  .card h2{ font-size:18px; font-weight:600; margin:0 0 4px; }
+  .card h3{ font-size:16px; font-weight:600; margin:18px 0 6px; }
+  .card .lead{ margin:0 0 14px; color:var(--ink-soft); font-size:14.5px; }
+  .card p{ margin:0 0 10px; }
+
+  /* ---------- art ---------- */
+  .art-card{ padding:12px; margin:0 0 14px; }
+  .art-wrap{ border-radius:12px; overflow:hidden; line-height:0; }
+  #art{ width:100%; height:auto; display:block; aspect-ratio:1/1; }
+  .caption{
+    margin:10px 4px 0; font-size:14.5px; color:var(--ink-soft); line-height:1.55;
+  }
+  .caption strong{ color:var(--ink); }
+  .hi-line{
+    margin:8px 4px 0; padding:8px 12px; border-radius:10px;
+    background:var(--amber-soft); color:var(--amber); font-size:14.5px;
+    font-family:var(--font-math);
+  }
+
+  /* math */
+  .m{ font-family:var(--font-math); white-space:nowrap; }
+  .eq{
+    font-family:var(--font-math); font-size:22px; text-align:center;
+    padding:12px 8px; margin:0 0 14px;
+    background:var(--paper); border-radius:12px;
+    overflow-x:auto; white-space:nowrap;
+  }
+
+  /* ---------- form controls ---------- */
+  .field{ margin:0 0 14px; }
+  .field:last-child{ margin-bottom:0; }
+  .field-head{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    margin-bottom:2px;
+  }
+  .field-head label{ font-weight:600; }
+  .num{
+    width:5.5ch; padding:6px 8px;
+    border:2px solid var(--line); border-radius:10px;
+    font-family:var(--font-math); font-size:20px; font-weight:700;
+    color:var(--blue); text-align:center; background:var(--surface);
+  }
+  .num:focus{ border-color:var(--violet-fill); outline:none; }
+  .num[aria-invalid="true"]{ border-color:var(--red); color:var(--red); background:var(--red-soft); }
+  .text-in{
+    width:100%; padding:10px 12px;
+    border:2px solid var(--line); border-radius:12px; background:var(--surface);
+  }
+  .text-in:focus{ border-color:var(--violet-fill); outline:none; }
+  textarea.text-in{ min-height:110px; resize:vertical; line-height:1.55; }
+  input[type=range]{
+    width:100%; height:36px; margin:0;
+    accent-color:var(--blue-fill); cursor:pointer;
+  }
+  .ticks{
+    display:flex; justify-content:space-between;
+    font-size:12px; color:var(--ink-soft); padding:0 6px;
+    font-family:var(--font-math);
+  }
+  .hint{ font-size:13px; color:var(--ink-soft); margin:4px 0 0; }
+  .msg{ font-size:14px; margin:6px 0 0; padding:6px 10px; border-radius:8px; }
+  .msg.err{ color:var(--red); background:var(--red-soft); }
+  .msg.note{ color:var(--amber); background:var(--amber-soft); }
+  .msg.ok{ color:var(--green); background:var(--green-soft); }
+  .msg:empty{ display:none; }
+
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .row > label{ display:flex; align-items:center; gap:8px; min-height:40px; }
+  .seg{
+    display:flex; flex-wrap:wrap; gap:6px; border:0; padding:0; margin:0 0 12px;
+  }
+  .seg legend{ font-weight:600; margin-bottom:4px; padding:0; }
+  .seg label{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 12px; min-height:40px;
+    border:2px solid var(--line); border-radius:100px; cursor:pointer;
+    font-size:14.5px; background:var(--surface);
+  }
+  .seg label:has(input:checked){ border-color:var(--blue-fill); background:var(--blue-soft); color:var(--blue); font-weight:600; }
+  .seg input{ accent-color:var(--blue-fill); margin:0; }
+  .check{ display:flex; align-items:center; gap:8px; min-height:40px; cursor:pointer; }
+  .check input{ width:20px; height:20px; accent-color:var(--blue-fill); margin:0; }
+  input[type=color]{
+    width:52px; height:40px; padding:2px; border:2px solid var(--line);
+    border-radius:10px; background:var(--surface); cursor:pointer;
+  }
+
+  /* buttons */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    min-height:48px; padding:10px 18px; border-radius:14px;
+    border:2px solid transparent; font-size:16px; font-weight:600; cursor:pointer;
+  }
+  .btn-primary{ background:var(--blue); color:#fff; }
+  .btn-violet{ background:var(--violet); color:#fff; }
+  .btn-ghost{ background:var(--surface); color:var(--blue); border-color:var(--line); }
+  .btn-small{ min-height:40px; padding:6px 14px; font-size:14px; border-radius:12px; }
+  .btn-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .btn-row .btn{ flex:1 1 180px; }
+  .presets{ display:flex; flex-wrap:wrap; gap:6px; }
+  .presets .btn{ flex:0 1 auto; }
+
+  /* table */
+  .tbl-wrap{ overflow-x:auto; margin:0 0 6px; }
+  table{ border-collapse:collapse; width:100%; font-size:15px; }
+  th, td{ padding:7px 8px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
+  th{ font-size:13px; color:var(--ink-soft); font-weight:600; }
+  td.m{ font-size:16px; }
+  tr.is-on td{ background:var(--amber-soft); }
+  .linkbtn{
+    border:1.5px solid var(--line); background:var(--surface); color:var(--blue);
+    border-radius:8px; padding:3px 9px; font-size:13px; cursor:pointer; min-height:32px;
+  }
+
+  /* explanation */
+  .explain ol, .explain ul{ padding-left:22px; margin:0 0 10px; }
+  .explain li{ margin-bottom:6px; }
+  .fact{
+    background:var(--blue-soft); border-radius:12px; padding:12px 14px; margin:0 0 10px;
+  }
+  .fact b{ color:var(--blue); }
+  .warn-note{ font-size:14px; color:var(--ink-soft); border-left:3px solid var(--violet-fill); padding-left:10px; }
+
+  /* compare */
+  .thumbs{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(78px, 1fr)); gap:8px;
+    margin:0 0 6px;
+  }
+  .thumb{
+    border:2px solid var(--line); border-radius:12px; padding:4px 4px 2px;
+    background:var(--surface); cursor:pointer; line-height:1.2;
+  }
+  .thumb svg{ width:100%; height:auto; display:block; border-radius:8px; }
+  .thumb span{ display:block; font-family:var(--font-math); font-size:14px; padding:3px 0; text-align:center; }
+  .thumb[aria-pressed="true"]{ border-color:var(--blue-fill); background:var(--blue-soft); font-weight:700; }
+  .pair{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 0 10px; }
+  .pair figure{ margin:0; text-align:center; }
+  .pair svg{ width:100%; max-width:220px; height:auto; border-radius:10px; }
+  .pair figcaption{ font-size:14px; font-weight:600; font-family:var(--font-math); }
+  .cmp td.diff{ color:var(--violet); font-weight:700; }
+
+  footer{ font-size:13px; color:var(--ink-soft); margin-top:18px; text-align:center; }
+  footer p{ margin:4px 0; }
+
+  @media (max-width:420px){
+    .top h1{ font-size:22px; }
+    .eq{ font-size:18px; }
+    .card{ padding:16px 14px 14px; }
+  }
+  @media print{
+    .ctrl-col, .save-card, .thumbs, footer{ display:none !important; }
+    .layout{ grid-template-columns:1fr; }
+    body{ background:#fff; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <p class="eyebrow">4주차 중수 미션 · 나머지 연산 아트</p>
+    <h1><span id="nickTitle">[내 별명]</span>의 곱셈 원 아트</h1>
+    <p class="sub">곡선은 하나도 그리지 않았어요. 원 위의 <span class="m">i</span>번 점을 <span class="m">(k × i) mod N</span>번 점과 <b>직선</b>으로 이었을 뿐인데 곡선이 떠올라요.</p>
+  </header>
+
+  <main>
+    <div class="layout">
+
+      <!-- ===== 작품 ===== -->
+      <section class="art-col" aria-label="작품">
+        <figure class="card art-card">
+          <div class="art-wrap">
+            <svg id="art" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="곱셈 원 아트"></svg>
+          </div>
+          <figcaption>
+            <p class="caption" id="artCaption"></p>
+            <p class="hi-line" id="hiLine"></p>
+          </figcaption>
+        </figure>
+
+        <section class="card save-card" aria-labelledby="saveH">
+          <h2 id="saveH">저장하기</h2>
+          <p class="lead">그림은 SVG(확대해도 선명한 그림 파일)로, 수학 설명·계산 예시·관찰 메모는 수업용 텍스트(.txt)로 저장해요.</p>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="saveSvg">SVG 그림 저장</button>
+            <button type="button" class="btn btn-violet" id="saveTxt">수업용 텍스트 저장</button>
+            <button type="button" class="btn btn-ghost" id="copyTxt">텍스트 복사</button>
+          </div>
+          <p class="msg" id="saveMsg" role="status" aria-live="polite"></p>
+        </section>
+      </section>
+
+      <!-- ===== 조작 ===== -->
+      <section class="ctrl-col" aria-label="설정">
+
+        <section class="card" aria-labelledby="nameH">
+          <h2 id="nameH">작품 이름</h2>
+          <div class="field">
+            <label for="nick" class="sr-only">별명</label>
+            <input id="nick" class="text-in" type="text" maxlength="20" value="[내 별명]" autocomplete="off" spellcheck="false">
+            <p class="hint">실명 말고 <b>별명</b>을 써 주세요(최대 20자). 제목과 저장 파일에 들어가요.</p>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="numH">
+          <h2 id="numH">수 정하기</h2>
+          <p class="lead">슬라이더는 방향키(←/→)로 1씩, 숫자 칸은 직접 입력해도 돼요.</p>
+
+          <div class="field">
+            <div class="field-head">
+              <label for="nRange">점의 개수 <span class="m">N</span></label>
+              <input id="nNum" class="num" type="number" inputmode="numeric" min="30" max="240" step="1" value="200" aria-label="N 직접 입력 (30 이상 240 이하 정수)" aria-describedby="nMsg">
+            </div>
+            <input id="nRange" type="range" min="30" max="240" step="1" value="200">
+            <div class="ticks" aria-hidden="true"><span>30</span><span>240</span></div>
+            <p class="msg" id="nMsg" aria-live="polite"></p>
+          </div>
+
+          <div class="field">
+            <div class="field-head">
+              <label for="kRange">곱하는 수 <span class="m">k</span></label>
+              <input id="kNum" class="num" type="number" inputmode="numeric" min="2" max="12" step="1" value="2" aria-label="k 직접 입력 (2 이상 12 이하 정수)" aria-describedby="kMsg">
+            </div>
+            <input id="kRange" type="range" min="2" max="12" step="1" value="2">
+            <div class="ticks" aria-hidden="true"><span>2</span><span>12</span></div>
+            <p class="msg" id="kMsg" aria-live="polite"></p>
+          </div>
+
+          <h3>예시 작품</h3>
+          <div class="presets" id="presets">
+            <button type="button" class="btn btn-ghost btn-small" data-n="200" data-k="2">카디오이드 (200, 2)</button>
+            <button type="button" class="btn btn-ghost btn-small" data-n="200" data-k="3">네프로이드 (200, 3)</button>
+            <button type="button" class="btn btn-ghost btn-small" data-n="240" data-k="5">첨점 4개 (240, 5)</button>
+            <button type="button" class="btn btn-ghost btn-small" data-n="36" data-k="2">직선이 보이는 (36, 2)</button>
+            <button type="button" class="btn btn-ghost btn-small" data-n="200" data-k="10">도착점 20개 (200, 10)</button>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="hiH">
+          <h2 id="hiH">계산 예시 강조</h2>
+          <p class="lead">한 점을 골라 그 선분이 어떻게 계산되었는지 그림에서 굵게 보여 줘요.</p>
+          <div class="field">
+            <div class="field-head">
+              <label for="hiRange">출발점 번호 <span class="m">i</span></label>
+              <input id="hiNum" class="num" type="number" inputmode="numeric" min="0" max="199" step="1" value="150" aria-label="강조할 i 직접 입력" aria-describedby="hiMsg">
+            </div>
+            <input id="hiRange" type="range" min="0" max="199" step="1" value="150">
+            <div class="ticks" aria-hidden="true"><span>0</span><span id="hiMaxTick">199</span></div>
+            <p class="msg" id="hiMsg" aria-live="polite"></p>
+          </div>
+          <label class="check"><input type="checkbox" id="showHi" checked> 그림에 강조 선 표시</label>
+        </section>
+
+        <section class="card" aria-labelledby="colorH">
+          <h2 id="colorH">색상</h2>
+          <fieldset class="seg">
+            <legend>배경</legend>
+            <label><input type="radio" name="theme" value="dark" checked> 밤하늘(어두운 배경)</label>
+            <label><input type="radio" name="theme" value="light"> 종이(흰 배경·인쇄용)</label>
+          </fieldset>
+          <fieldset class="seg">
+            <legend>선 색</legend>
+            <label><input type="radio" name="colorMode" value="rainbow" checked> 무지개(i에 따라)</label>
+            <label><input type="radio" name="colorMode" value="mono"> 한 가지 색</label>
+          </fieldset>
+          <div class="row" id="monoRow" hidden>
+            <label for="lineColor">선 색 고르기</label>
+            <input type="color" id="lineColor" value="#7FE0FF">
+          </div>
+          <p class="msg note" id="contrastMsg" aria-live="polite"></p>
+          <div class="field" style="margin-top:10px">
+            <div class="field-head"><label for="width">선 굵기</label><output id="widthOut" class="m">1.6</output></div>
+            <input id="width" type="range" min="0.6" max="4" step="0.2" value="1.6">
+          </div>
+          <div class="field">
+            <div class="field-head"><label for="opacity">선 진하기</label><output id="opacityOut" class="m">90%</output></div>
+            <input id="opacity" type="range" min="30" max="100" step="5" value="90">
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="axisH">
+          <h2 id="axisH">축과 점</h2>
+          <fieldset class="seg">
+            <legend>0번 점의 위치</legend>
+            <label><input type="radio" name="start" value="right" checked> 오른쪽 (x축 방향, 0°)</label>
+            <label><input type="radio" name="start" value="top"> 위쪽 (y축 방향, 90°)</label>
+          </fieldset>
+          <fieldset class="seg">
+            <legend>번호 붙이는 방향</legend>
+            <label><input type="radio" name="dir" value="ccw" checked> 시계 반대 방향</label>
+            <label><input type="radio" name="dir" value="cw"> 시계 방향</label>
+          </fieldset>
+          <label class="check"><input type="checkbox" id="showAxes"> 좌표축(x축·y축) 표시</label>
+          <label class="check"><input type="checkbox" id="showPoints" checked> 원 위의 점 표시</label>
+          <label class="check"><input type="checkbox" id="showLabels"> 점 번호 표시</label>
+          <p class="hint" id="labelHint">N이 60 이하면 모든 번호, 그보다 크면 5 또는 10의 배수 번호만 보여요.</p>
+        </section>
+      </section>
+    </div>
+
+    <!-- ===== 수학 설명 ===== -->
+    <section class="card full explain" aria-labelledby="mathH">
+      <h2 id="mathH">수학 설명 — 왜 이것이 나머지 연산일까?</h2>
+      <div id="explain"></div>
+    </section>
+
+    <!-- ===== 비교 관찰 ===== -->
+    <section class="card full" aria-labelledby="cmpH">
+      <h2 id="cmpH">비교 관찰</h2>
+      <p class="lead" id="thumbLead">같은 N에서 k만 바꾼 작품들이에요. 눌러서 바꿔 보세요.</p>
+      <div class="thumbs" id="thumbs" role="group" aria-label="k 비교 작품"></div>
+
+      <h3>작품 A와 지금 작품 나란히 보기</h3>
+      <p class="hint" style="margin:0 0 8px">A는 비교 기준이에요. 지금 작품을 A로 고정한 뒤 N이나 k를 바꿔 보세요.</p>
+      <div class="pair">
+        <figure><svg id="pairA" viewBox="0 0 200 200" role="img" aria-label="작품 A"></svg><figcaption id="pairACap"></figcaption></figure>
+        <figure><svg id="pairB" viewBox="0 0 200 200" role="img" aria-label="지금 작품"></svg><figcaption id="pairBCap"></figcaption></figure>
+      </div>
+      <div class="tbl-wrap"><table class="cmp" id="cmpTable"></table></div>
+      <div class="btn-row" style="margin:6px 0 4px">
+        <button type="button" class="btn btn-ghost btn-small" id="pinA">지금 작품을 A로 고정</button>
+      </div>
+
+      <h3><label for="sentence">나의 수학 설명 한 문장</label></h3>
+      <input id="sentence" class="text-in" type="text" maxlength="200" placeholder="예: ○○ 때문에 직선만으로도 곡선이 보인다." autocomplete="off">
+      <h3><label for="memo">관찰 메모</label></h3>
+      <textarea id="memo" class="text-in" maxlength="2000" placeholder="A와 지금 작품을 비교하며 달라진 점, 같은 점, 궁금한 점을 적어 보세요."></textarea>
+      <p class="hint">별명·한 문장·메모는 이 기기 브라우저에만 저장돼요. <button type="button" class="linkbtn" id="clearLocal">저장된 내용 지우기</button></p>
+    </section>
+  </main>
+
+  <footer>
+    <p>외부 AI API 없이 브라우저에서 계산·그리기를 합니다. 학생 이름·성적·연락처를 입력받지 않습니다.</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- 상수 ---------- */
+  var DEFAULT_NICK = '[내 별명]';
+  var LIMITS = { N:[30,240], k:[2,12] };
+  var VB = 1000, C = 500, R = 420;
+  var THEMES = {
+    dark:  { bg:'#0B0D1F', circle:'#4A4F86', point:'#D6D9FF', label:'#D6D9FF', axis:'#7378B8',
+             hi:'#FFFFFF', hiHalo:'#0B0D1F', mono:'#7FE0FF', light:66, sat:92, name:'밤하늘(어두운 배경)' },
+    light: { bg:'#FFFFFF', circle:'#A9ACCB', point:'#1D1C33', label:'#1D1C33', axis:'#6C6F99',
+             hi:'#111111', hiHalo:'#FFFFFF', mono:'#1D3FB0', light:38, sat:85, name:'종이(흰 배경)' }
+  };
+  var STORE_KEY = 'w4-modular-art';
+
+  var state = {
+    nick: DEFAULT_NICK, N: 200, k: 2, hi: 150, showHi: true,
+    theme: 'dark', colorMode: 'rainbow', color: '#7FE0FF', colorTouched: false,
+    width: 1.6, opacity: 0.9,
+    start: 'right', dir: 'ccw', axes: false, points: true, labels: false,
+    pinned: { N: 200, k: 3 }
+  };
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* ---------- 수학 도우미 ---------- */
+  function gcd(a, b){ a = Math.abs(a); b = Math.abs(b); while (b){ var t = a % b; a = b; b = t; } return a; }
+  function target(i, k, N){ return (k * i) % N; }
+
+  function facts(N, k){
+    var g1 = gcd(k - 1, N), d = gcd(k, N);
+    var fixed = [];
+    for (var m = 0; m < g1; m++) fixed.push(m * N / g1);
+    var cusps = [];
+    for (var c = 0; c < k - 1; c++) cusps.push(fmtDeg(360 * c / (k - 1)));
+    return {
+      N: N, k: k, g1: g1, d: d, fixed: fixed,
+      segments: N - g1,
+      targets: N / d,
+      cusps: k - 1, cuspAngles: cusps,
+      curve: k === 2 ? '카디오이드(심장형)' : (k === 3 ? '네프로이드(콩팥형)' : '첨점이 ' + (k - 1) + '개인 에피사이클로이드')
+    };
+  }
+  function fmtDeg(x){ var r = Math.round(x * 10) / 10; return (r % 1 === 0 ? r.toFixed(0) : r.toFixed(1)) + '°'; }
+
+  function calc(i, k, N){
+    var p = k * i, q = Math.floor(p / N), r = p % N;
+    return { i: i, p: p, q: q, r: r };
+  }
+  function calcStr(c, k, N){
+    return k + ' × ' + c.i + ' = ' + c.p + ' = ' + c.q + ' × ' + N + ' + ' + c.r;
+  }
+  function examples(N, k, hi){
+    var set = [1, 2, 3, Math.ceil(N / k), hi, N - 1];
+    var out = [];
+    set.forEach(function(v){ if (v >= 0 && v < N && out.indexOf(v) < 0) out.push(v); });
+    return out.sort(function(a, b){ return a - b; });
+  }
+
+  /* ---------- 좌표 ---------- */
+  function angle(i, N){
+    var s = state.start === 'top' ? Math.PI / 2 : 0;
+    var dir = state.dir === 'cw' ? -1 : 1;
+    return s + dir * 2 * Math.PI * i / N;
+  }
+  function pt(i, N, cx, cy, r){
+    var a = angle(i, N);
+    return [cx + r * Math.cos(a), cy - r * Math.sin(a)];
+  }
+  function f1(x){ return Math.round(x * 10) / 10; }
+
+  function safeColor(c){ return /^#[0-9a-fA-F]{6}$/.test(c) ? c : THEMES[state.theme].mono; }
+  function lineColor(i, N){
+    var T = THEMES[state.theme];
+    if (state.colorMode === 'mono') return safeColor(state.color);
+    return 'hsl(' + Math.round(360 * i / N) + ',' + T.sat + '%,' + T.light + '%)';
+  }
+
+  /* ---------- 큰 그림 ---------- */
+  function renderArt(){
+    var N = state.N, k = state.k, T = THEMES[state.theme];
+    var s = [];
+    s.push('<rect x="0" y="0" width="' + VB + '" height="' + VB + '" fill="' + T.bg + '"/>');
+
+    if (state.axes){
+      s.push('<g stroke="' + T.axis + '" stroke-width="2" fill="' + T.axis + '">');
+      s.push('<line x1="30" y1="500" x2="958" y2="500"/><polygon points="972,500 952,490 952,510" stroke="none"/>');
+      s.push('<line x1="500" y1="970" x2="500" y2="42"/><polygon points="500,28 490,48 510,48" stroke="none"/>');
+      s.push('</g>');
+      s.push('<g fill="' + T.axis + '" font-family="Times New Roman, serif" font-style="italic" font-size="34">');
+      s.push('<text x="950" y="540">x</text><text x="518" y="48">y</text><text x="512" y="534" font-style="normal" font-size="26">O</text>');
+      s.push('</g>');
+    }
+
+    s.push('<circle cx="' + C + '" cy="' + C + '" r="' + R + '" fill="none" stroke="' + T.circle + '" stroke-width="2"/>');
+
+    var sw = state.width, op = state.opacity;
+    if (state.colorMode === 'mono'){
+      var d = [];
+      for (var i = 0; i < N; i++){
+        var j = target(i, k, N);
+        if (j === i) continue;
+        var a = pt(i, N, C, C, R), b = pt(j, N, C, C, R);
+        d.push('M' + f1(a[0]) + ' ' + f1(a[1]) + 'L' + f1(b[0]) + ' ' + f1(b[1]));
+      }
+      s.push('<path d="' + d.join('') + '" fill="none" stroke="' + safeColor(state.color) + '" stroke-width="' + sw + '" stroke-opacity="' + op + '" stroke-linecap="round"/>');
+    } else {
+      s.push('<g fill="none" stroke-width="' + sw + '" stroke-opacity="' + op + '" stroke-linecap="round">');
+      for (var i2 = 0; i2 < N; i2++){
+        var j2 = target(i2, k, N);
+        if (j2 === i2) continue;
+        var a2 = pt(i2, N, C, C, R), b2 = pt(j2, N, C, C, R);
+        s.push('<line x1="' + f1(a2[0]) + '" y1="' + f1(a2[1]) + '" x2="' + f1(b2[0]) + '" y2="' + f1(b2[1]) + '" stroke="' + lineColor(i2, N) + '"/>');
+      }
+      s.push('</g>');
+    }
+
+    if (state.points){
+      var pr = N > 150 ? 2.6 : (N > 80 ? 3.4 : 4.5);
+      s.push('<g fill="' + T.point + '">');
+      for (var p = 0; p < N; p++){
+        var q = pt(p, N, C, C, R);
+        s.push('<circle cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="' + pr + '"/>');
+      }
+      s.push('</g>');
+    }
+
+    if (state.labels){
+      var step = labelStep(N);
+      s.push('<g fill="' + T.label + '" font-family="Arial, sans-serif" font-size="' + (N <= 60 ? 19 : 21) + '" text-anchor="middle" dominant-baseline="central">');
+      for (var L = 0; L < N; L += step){
+        var lp = pt(L, N, C, C, R + 30);
+        s.push('<text x="' + f1(lp[0]) + '" y="' + f1(lp[1]) + '">' + L + '</text>');
+      }
+      s.push('</g>');
+    }
+
+    if (state.showHi){
+      var hi = state.hi, hj = target(hi, k, N);
+      var ha = pt(hi, N, C, C, R), hb = pt(hj, N, C, C, R);
+      if (hi !== hj){
+        s.push('<line x1="' + f1(ha[0]) + '" y1="' + f1(ha[1]) + '" x2="' + f1(hb[0]) + '" y2="' + f1(hb[1]) + '" stroke="' + T.hiHalo + '" stroke-width="11" stroke-linecap="round"/>');
+        s.push('<line x1="' + f1(ha[0]) + '" y1="' + f1(ha[1]) + '" x2="' + f1(hb[0]) + '" y2="' + f1(hb[1]) + '" stroke="' + T.hi + '" stroke-width="5" stroke-linecap="round"/>');
+      }
+      s.push('<circle cx="' + f1(ha[0]) + '" cy="' + f1(ha[1]) + '" r="10" fill="' + T.hi + '" stroke="' + T.hiHalo + '" stroke-width="3"/>');
+      if (hi !== hj) s.push('<circle cx="' + f1(hb[0]) + '" cy="' + f1(hb[1]) + '" r="10" fill="' + T.hiHalo + '" stroke="' + T.hi + '" stroke-width="5"/>');
+      var la = pt(hi, N, C, C, R + 50), lb = pt(hj, N, C, C, R + 50);
+      var tAttr = ' font-family="Arial, sans-serif" font-size="30" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="' + T.hi + '" stroke="' + T.hiHalo + '" stroke-width="6" paint-order="stroke"';
+      if (hi === hj){
+        s.push('<text x="' + f1(la[0]) + '" y="' + f1(la[1]) + '"' + tAttr + '>' + hi + ' (제자리)</text>');
+      } else {
+        s.push('<text x="' + f1(la[0]) + '" y="' + f1(la[1]) + '"' + tAttr + '>' + hi + '</text>');
+        s.push('<text x="' + f1(lb[0]) + '" y="' + f1(lb[1]) + '"' + tAttr + '>' + hj + '</text>');
+      }
+    }
+
+    var svg = $('art');
+    svg.innerHTML = s.join('');
+    var F = facts(N, k);
+    svg.setAttribute('aria-label', '곱셈 원 아트: 원 위 ' + N + '개 점, i번 점을 (' + k + '×i) mod ' + N + '번 점과 이은 선분 ' + F.segments + '개. 선분들이 ' + F.curve + ' 모양을 감싼다.');
+  }
+  function labelStep(N){ return N <= 60 ? 1 : (N <= 120 ? 5 : 10); }
+
+  /* ---------- 작은 그림 ---------- */
+  function miniSVG(svg, N, k, size){
+    var T = THEMES[state.theme], c = size / 2, r = size * 0.44;
+    var d = [];
+    for (var i = 0; i < N; i++){
+      var j = target(i, k, N);
+      if (j === i) continue;
+      var a = pt(i, N, c, c, r), b = pt(j, N, c, c, r);
+      d.push('M' + f1(a[0]) + ' ' + f1(a[1]) + 'L' + f1(b[0]) + ' ' + f1(b[1]));
+    }
+    var col = state.colorMode === 'mono' ? safeColor(state.color) : T.mono;
+    svg.innerHTML = '<rect width="' + size + '" height="' + size + '" fill="' + T.bg + '"/>' +
+      '<circle cx="' + c + '" cy="' + c + '" r="' + r + '" fill="none" stroke="' + T.circle + '" stroke-width="' + (size / 200) + '"/>' +
+      '<path d="' + d.join('') + '" fill="none" stroke="' + col + '" stroke-width="' + (size / 260) + '" stroke-opacity="0.9"/>';
+  }
+
+  var thumbKey = '';
+  function renderThumbs(){
+    var key = [state.N, state.theme, state.start, state.dir, state.colorMode, state.color].join('|');
+    var box = $('thumbs');
+    if (key !== thumbKey){
+      thumbKey = key;
+      box.innerHTML = '';
+      for (var k = 2; k <= 12; k++){
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'thumb';
+        b.dataset.k = k;
+        b.setAttribute('aria-label', 'k를 ' + k + '로 바꾸기');
+        var sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        sv.setAttribute('viewBox', '0 0 100 100');
+        sv.setAttribute('aria-hidden', 'true');
+        miniSVG(sv, state.N, k, 100);
+        var sp = document.createElement('span');
+        sp.textContent = 'k = ' + k;
+        b.appendChild(sv); b.appendChild(sp);
+        box.appendChild(b);
+      }
+    }
+    Array.prototype.forEach.call(box.children, function(b){
+      b.setAttribute('aria-pressed', String(+b.dataset.k === state.k));
+    });
+    $('thumbLead').textContent = '같은 N = ' + state.N + '에서 k만 바꾼 작품들이에요. 눌러서 바꿔 보세요. (k가 1 커질 때마다 뾰족한 점이 하나씩 늘어나요.)';
+  }
+
+  function cmpRows(A, B){
+    return [
+      ['점의 개수 N', A.N, B.N],
+      ['곱하는 수 k', A.k, B.k],
+      ['그린 선분 수 (N − 제자리 점)', A.segments, B.segments],
+      ['제자리 점 수 gcd(k−1, N)', A.g1, B.g1],
+      ['서로 다른 도착점 수 N ÷ gcd(k, N)', A.targets, B.targets],
+      ['포락선의 첨점 수 (k − 1)', A.cusps, B.cusps]
+    ];
+  }
+  function renderCompare(){
+    var A = facts(state.pinned.N, state.pinned.k), B = facts(state.N, state.k);
+    miniSVG($('pairA'), A.N, A.k, 200);
+    miniSVG($('pairB'), B.N, B.k, 200);
+    $('pairACap').textContent = 'A: N = ' + A.N + ', k = ' + A.k;
+    $('pairBCap').textContent = '지금: N = ' + B.N + ', k = ' + B.k;
+    var h = '<thead><tr><th scope="col">항목</th><th scope="col">A</th><th scope="col">지금</th></tr></thead><tbody>';
+    cmpRows(A, B).forEach(function(r){
+      var diff = r[1] !== r[2] ? ' diff' : '';
+      h += '<tr><th scope="row">' + r[0] + '</th><td class="m' + diff + '">' + r[1] + '</td><td class="m' + diff + '">' + r[2] + '</td></tr>';
+    });
+    $('cmpTable').innerHTML = h + '</tbody>';
+  }
+
+  /* ---------- 설명 ---------- */
+  function listStr(arr, max){
+    if (arr.length <= max) return arr.join(', ');
+    return arr.slice(0, max).join(', ') + ', … (' + arr.length + '개)';
+  }
+
+  function renderExplain(){
+    var N = state.N, k = state.k, F = facts(N, k);
+    var ex = examples(N, k, state.hi);
+    var wrapI = Math.ceil(N / k);
+    var h = '';
+
+    h += '<div class="eq">i번 점 &nbsp;→&nbsp; (' + k + ' × i) mod ' + N + '번 점</div>';
+
+    h += '<h3>1. 규칙</h3>';
+    h += '<p>원 둘레를 똑같이 <b>' + N + '</b>등분한 점에 0번부터 ' + (N - 1) + '번까지 번호를 붙이고, 각 <span class="m">i</span>번 점을 <span class="m">(' + k + ' × i) mod ' + N + '</span>번 점과 <b>선분</b>으로 잇습니다. ' +
+         '<span class="m">a mod N</span>은 <span class="m">a</span>를 <span class="m">N</span>으로 나눈 <b>나머지</b>로, 항상 0 이상 <span class="m">N − 1</span> 이하의 정수입니다.</p>';
+
+    h += '<h3>2. 왜 나머지 연산이 필요할까?</h3>';
+    h += '<ul>';
+    h += '<li>원 위에는 0번부터 ' + (N - 1) + '번까지 ' + N + '개의 점뿐입니다. 한 바퀴를 돌면 제자리로 오므로 ' + N + '번째 자리는 0번 점, ' + (N + 1) + '번째 자리는 1번 점과 같습니다. 시계에서 15시를 3시로 읽는 것(15를 12로 나눈 나머지 3)과 같은 원리입니다.</li>';
+    h += '<li>그래서 <span class="m">' + k + ' × i</span>가 ' + N + ' 이상이 되면 ' + N + '을 빼서(필요하면 여러 번) 0 ~ ' + (N - 1) + ' 범위로 되돌립니다. 식으로 쓰면 <span class="m">' + k + ' × i = q × ' + N + ' + r</span> <span class="m">(0 ≤ r &lt; ' + N + ')</span>일 때 도착점은 <span class="m">r</span>번이고, 이 <span class="m">r</span>이 바로 <span class="m">(' + k + ' × i) mod ' + N + '</span>입니다. 이것을 합동식으로 <span class="m">' + k + 'i ≡ r (mod ' + N + ')</span>이라고도 씁니다.</li>';
+    h += '<li>이번 작품에서는 <span class="m">i ≥ ' + wrapI + '</span>부터 <span class="m">' + k + ' × i</span>가 ' + N + ' 이상이 되어 원을 한 바퀴 넘어갑니다.</li>';
+    h += '<li>각도로 보면 <span class="m">i</span>번 점은 0번 점에서 <span class="m">360° × i ÷ ' + N + '</span>만큼 돌아간 곳에 있고, 도착점은 그 각을 <b>' + k + '배</b> 한 곳(360°를 넘으면 360°의 배수를 뺀 곳)입니다. 즉 이 그림은 “원 위에서 각을 ' + k + '배 하는 규칙”을 선분으로 나타낸 것입니다.</li>';
+    h += '</ul>';
+
+    h += '<h3>3. 계산 예시</h3>';
+    h += '<div class="tbl-wrap"><table><thead><tr><th scope="col">출발점 i</th><th scope="col">' + k + ' × i</th><th scope="col">나눗셈 (몫·나머지)</th><th scope="col">도착점</th><th scope="col"><span class="sr-only">그림에서 보기</span></th></tr></thead><tbody>';
+    ex.forEach(function(i){
+      var c = calc(i, k, N);
+      var on = i === state.hi ? ' class="is-on"' : '';
+      var note = c.r === i ? ' (제자리)' : '';
+      h += '<tr' + on + '><td class="m">' + i + '</td><td class="m">' + c.p + '</td><td class="m">' + c.p + ' = ' + c.q + ' × ' + N + ' + ' + c.r + '</td><td class="m"><b>' + c.r + '번</b>' + note + '</td>' +
+           '<td><button type="button" class="linkbtn" data-hi="' + i + '" aria-label="i = ' + i + ' 선분을 그림에서 강조">그림에서 보기</button></td></tr>';
+    });
+    h += '</tbody></table></div>';
+    h += '<p class="hint">몫 <span class="m">q</span>는 “원을 몇 바퀴 넘었는지”, 나머지 <span class="m">r</span>은 “원 위의 실제 위치”를 뜻합니다.</p>';
+
+    h += '<h3>4. 이 작품의 수학적 특징 (N = ' + N + ', k = ' + k + ')</h3>';
+    h += '<div class="fact"><b>제자리 점 ' + F.g1 + '개, 그린 선분 ' + F.segments + '개.</b> ' +
+         '<span class="m">' + k + 'i ≡ i (mod ' + N + ')</span>, 즉 <span class="m">' + (k === 2 ? 'i' : (k - 1) + 'i') + '</span>가 ' + N + '의 배수인 점은 자기 자신으로 가므로 선분이 생기지 않습니다. 이런 점의 개수는 <span class="m">gcd(' + (k - 1) + ', ' + N + ') = ' + F.g1 + '</span>이고, 번호는 ' + listStr(F.fixed, 12) + '번입니다.</div>';
+    if (F.d === 1){
+      h += '<div class="fact"><b>도착점 ' + F.targets + '개 — 모든 점이 정확히 한 번씩 도착점이 됩니다.</b> <span class="m">gcd(' + k + ', ' + N + ') = 1</span>이면 서로 다른 <span class="m">i</span>는 서로 다른 점으로 갑니다(<span class="m">' + k + 'i ≡ ' + k + 'j (mod ' + N + ')</span>이면 <span class="m">i ≡ j</span>).</div>';
+    } else {
+      h += '<div class="fact"><b>도착점은 ' + F.targets + '개뿐입니다.</b> <span class="m">gcd(' + k + ', ' + N + ') = ' + F.d + '</span>이므로 도착점 번호는 모두 ' + F.d + '의 배수(0, ' + F.d + ', ' + (2 * F.d) + ', …)이고, 도착점 하나에 선분이 ' + F.d + '개씩 모입니다. (<span class="m">' + k + 'i ≡ ' + k + 'j (mod ' + N + ')</span> ⇔ <span class="m">i ≡ j (mod ' + F.targets + ')</span>)</div>';
+    }
+    h += '<div class="fact"><b>보이는 곡선: ' + F.curve + '.</b> 선분들이 바깥에서 감싸며 만드는 곡선을 <b>포락선</b>이라고 합니다. 점이 많아질수록 이 포락선은 뾰족한 점(첨점)이 <span class="m">k − 1 = ' + F.cusps + '</span>개인 에피사이클로이드에 가까워집니다. ' +
+         '첨점은 각을 ' + k + '배 해도 제자리인 위치' + (k === 2 ? ', 즉 0번 점(0°) 한 곳에서 원에 닿습니다.</div>' :
+         ', 즉 0번 점에서 잰 각 <span class="m">θ = 360° × m ÷ ' + (k - 1) + '</span> (m = 0, …, ' + (k - 2) + ': ' + F.cuspAngles.join(', ') + ')에서 원에 닿습니다.</div>');
+    h += '<p class="warn-note">그림 속 곡선은 실제로 그린 것이 아니라 직선들이 만든 착시입니다. ' +
+         (N < 12 * (k - 1) ? '지금은 N이 k에 비해 작아서 곡선보다 직선이 더 잘 보입니다. N을 키워 보세요.' : 'N을 30처럼 작게 하면 하나하나의 직선이 드러나고, 240처럼 크게 하면 곡선이 더 매끄러워 보입니다.') + '</p>';
+
+    $('explain').innerHTML = h;
+  }
+
+  function renderCaption(){
+    var N = state.N, k = state.k, F = facts(N, k);
+    $('artCaption').innerHTML = '<strong>N = ' + N + ', k = ' + k + '</strong> · 선분 ' + F.segments + '개 · 제자리 점 ' + F.g1 + '개 · 도착점 ' + F.targets + '개 · 보이는 곡선: ' + F.curve;
+    var c = calc(state.hi, k, N);
+    var line = '강조: ' + c.i + '번 점 → ' + calcStr(c, k, N) + ' → ' + c.r + '번 점' + (c.r === c.i ? ' (제자리라 선분 없음)' : '');
+    $('hiLine').textContent = line;
+    $('hiLine').hidden = !state.showHi;
+  }
+
+  /* ---------- 대비 검사 ---------- */
+  function lum(hex){
+    var v = [1, 3, 5].map(function(p){
+      var c = parseInt(hex.substr(p, 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+  }
+  function contrast(a, b){
+    var x = lum(a), y = lum(b);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+  }
+  function renderContrast(){
+    var msg = '';
+    if (state.colorMode === 'mono'){
+      var r = contrast(safeColor(state.color), THEMES[state.theme].bg);
+      if (r < 3) msg = '선 색이 배경과 비슷해서 잘 안 보일 수 있어요(대비 ' + r.toFixed(1) + ' : 1). 더 밝거나 더 어두운 색을 골라 보세요.';
+    }
+    $('contrastMsg').textContent = msg;
+  }
+
+  /* ---------- 전체 갱신 ---------- */
+  // 선분이 최대 240개라 매 입력마다 바로 다시 그려도 충분히 빠름
+  function update(){
+    var nick = state.nick.trim() || DEFAULT_NICK;
+    $('nickTitle').textContent = nick;
+    document.title = nick + '의 곱셈 원 아트 — 나머지 연산';
+    renderArt();
+    renderCaption();
+    renderExplain();
+    renderThumbs();
+    renderCompare();
+    renderContrast();
+  }
+
+  /* ---------- 정수 입력 + 범위 검사 ---------- */
+  function bindInt(opt){
+    var range = $(opt.range), num = $(opt.num), msg = $(opt.msg);
+    function setMsg(text, kind){ msg.textContent = text; msg.className = 'msg' + (kind ? ' ' + kind : ''); }
+    function check(){
+      var min = opt.min(), max = opt.max();
+      if (num.validity && num.validity.badInput) return '숫자만 입력할 수 있어요.';
+      var s = num.value.trim();
+      if (s === '') return '값을 입력해 주세요.';
+      if (!/^-?\d+$/.test(s)) return '소수점 없는 정수만 쓸 수 있어요.';
+      var v = parseInt(s, 10);
+      if (v < min || v > max) return opt.label + '은(는) ' + min + ' 이상 ' + max + ' 이하의 정수여야 해요.';
+      return null;
+    }
+    function set(v){
+      state[opt.key] = v; range.value = v; num.value = v;
+      num.removeAttribute('aria-invalid');
+      if (opt.after) opt.after();
+      update();
+    }
+    range.addEventListener('input', function(){ setMsg(''); set(parseInt(range.value, 10)); });
+    num.addEventListener('input', function(){
+      var e = check();
+      if (e){
+        num.setAttribute('aria-invalid', 'true');
+        setMsg(e + ' 그림은 마지막 올바른 값(' + opt.label + ' = ' + state[opt.key] + ')으로 유지돼요.', 'err');
+      } else { setMsg(''); set(parseInt(num.value, 10)); }
+    });
+    num.addEventListener('change', function(){
+      if (check()){
+        num.value = state[opt.key];
+        num.removeAttribute('aria-invalid');
+        setMsg('범위를 벗어난 값이라 ' + opt.label + ' = ' + state[opt.key] + '(으)로 되돌렸어요.', 'note');
+      }
+    });
+    return { set: set, setMsg: setMsg };
+  }
+
+  function syncHiBounds(){
+    var max = state.N - 1;
+    $('hiRange').max = max; $('hiNum').max = max; $('hiMaxTick').textContent = max;
+    if (state.hi > max){
+      state.hi = max;
+      hiCtl.setMsg('N이 줄어 강조할 i를 ' + max + '(으)로 바꿨어요.', 'note');
+    }
+    $('hiRange').value = state.hi; $('hiNum').value = state.hi;
+  }
+
+  var nCtl = bindInt({ range:'nRange', num:'nNum', msg:'nMsg', key:'N', label:'N',
+    min:function(){ return LIMITS.N[0]; }, max:function(){ return LIMITS.N[1]; }, after:syncHiBounds });
+  var kCtl = bindInt({ range:'kRange', num:'kNum', msg:'kMsg', key:'k', label:'k',
+    min:function(){ return LIMITS.k[0]; }, max:function(){ return LIMITS.k[1]; } });
+  var hiCtl = bindInt({ range:'hiRange', num:'hiNum', msg:'hiMsg', key:'hi', label:'i',
+    min:function(){ return 0; }, max:function(){ return state.N - 1; } });
+
+  /* ---------- 나머지 조작 ---------- */
+  $('presets').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-n]');
+    if (!b) return;
+    nCtl.setMsg(''); kCtl.setMsg('');
+    nCtl.set(+b.dataset.n);
+    kCtl.set(+b.dataset.k);
+  });
+  $('thumbs').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-k]');
+    if (b){ kCtl.setMsg(''); kCtl.set(+b.dataset.k); }
+  });
+  $('explain').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-hi]');
+    if (!b) return;
+    hiCtl.setMsg('');
+    state.showHi = true; $('showHi').checked = true;
+    hiCtl.set(+b.dataset.hi);
+    // 키보드 사용자를 위해 포커스를 같은 행의 버튼으로 되돌림
+    var again = document.querySelector('#explain button[data-hi="' + b.dataset.hi + '"]');
+    if (again) again.focus();
+  });
+  $('pinA').addEventListener('click', function(){
+    state.pinned = { N: state.N, k: state.k };
+    update();
+  });
+
+  $('nick').addEventListener('input', function(){ state.nick = this.value; update(); saveLocal(); });
+  $('showHi').addEventListener('change', function(){ state.showHi = this.checked; update(); });
+  $('showAxes').addEventListener('change', function(){ state.axes = this.checked; update(); });
+  $('showPoints').addEventListener('change', function(){ state.points = this.checked; update(); });
+  $('showLabels').addEventListener('change', function(){ state.labels = this.checked; update(); });
+
+  function radios(name, fn){
+    Array.prototype.forEach.call(document.querySelectorAll('input[name="' + name + '"]'), function(r){
+      r.addEventListener('change', function(){ if (r.checked) fn(r.value); });
+    });
+  }
+  radios('theme', function(v){
+    state.theme = v;
+    if (!state.colorTouched){ state.color = THEMES[v].mono; $('lineColor').value = state.color; }
+    update();
+  });
+  radios('colorMode', function(v){ state.colorMode = v; $('monoRow').hidden = v !== 'mono'; update(); });
+  radios('start', function(v){ state.start = v; update(); });
+  radios('dir', function(v){ state.dir = v; update(); });
+  $('lineColor').addEventListener('input', function(){ state.color = this.value; state.colorTouched = true; update(); });
+  $('width').addEventListener('input', function(){ state.width = +this.value; $('widthOut').textContent = (+this.value).toFixed(1); update(); });
+  $('opacity').addEventListener('input', function(){ state.opacity = this.value / 100; $('opacityOut').textContent = this.value + '%'; update(); });
+
+  /* ---------- 저장(localStorage, 이 기기에만) ---------- */
+  function saveLocal(){
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({ nick: state.nick, sentence: $('sentence').value, memo: $('memo').value }));
+    } catch (e) { /* 저장이 막힌 환경: 무시 */ }
+  }
+  function loadLocal(){
+    try {
+      var o = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (!o) return;
+      if (typeof o.nick === 'string'){ state.nick = o.nick.slice(0, 20); $('nick').value = state.nick; }
+      if (typeof o.sentence === 'string') $('sentence').value = o.sentence.slice(0, 200);
+      if (typeof o.memo === 'string') $('memo').value = o.memo.slice(0, 2000);
+    } catch (e) { /* 무시 */ }
+  }
+  $('sentence').addEventListener('input', saveLocal);
+  $('memo').addEventListener('input', saveLocal);
+  $('clearLocal').addEventListener('click', function(){
+    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+    state.nick = DEFAULT_NICK; $('nick').value = DEFAULT_NICK;
+    $('sentence').value = ''; $('memo').value = '';
+    update();
+    showSave('별명·한 문장·메모를 지웠어요.', 'ok');
+  });
+
+  /* ---------- 내보내기 ---------- */
+  function nickForFile(){
+    var n = (state.nick.trim() || DEFAULT_NICK);
+    if (n === DEFAULT_NICK) n = '내별명';
+    n = n.replace(/[\\\/:*?"<>|\[\]]/g, '').replace(/\s+/g, '_');
+    return n || '내별명';
+  }
+  function baseName(){ return '곱셈원아트_N' + state.N + '_k' + state.k + '_' + nickForFile(); }
+
+  function showSave(text, kind){ var m = $('saveMsg'); m.textContent = text; m.className = 'msg ' + (kind || ''); }
+
+  var DL_HELP = ' 휴대폰의 카카오톡·인스타그램 같은 앱 안 브라우저는 다운로드를 막는 경우가 많아요. 크롬·사파리·엣지로 열어 다시 시도하거나, 텍스트는 ‘텍스트 복사’를 쓰세요.';
+  function download(content, filename, type){
+    try {
+      if (typeof Blob === 'undefined' || !window.URL || !URL.createObjectURL) throw new Error('이 브라우저는 파일 만들기를 지원하지 않아요.');
+      var a = document.createElement('a');
+      if (!('download' in a)) throw new Error('이 브라우저는 바로 내려받기를 지원하지 않아요.');
+      var url = URL.createObjectURL(new Blob([content], { type: type }));
+      a.href = url; a.download = filename; a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+      showSave('‘' + filename + '’ 저장을 요청했어요. 다운로드 폴더를 확인하세요. 파일이 보이지 않으면 브라우저가 막았을 수 있어요.' + DL_HELP, 'ok');
+    } catch (e) {
+      showSave('저장하지 못했어요: ' + (e && e.message ? e.message : '알 수 없는 오류') + DL_HELP, 'err');
+    }
+  }
+
+  function buildSVG(){
+    var src = $('art');
+    var svg = src.cloneNode(true);
+    svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    svg.setAttribute('width', VB); svg.setAttribute('height', VB);
+    svg.removeAttribute('id'); svg.removeAttribute('role'); svg.removeAttribute('aria-label');
+    var T = THEMES[state.theme], NS = 'http://www.w3.org/2000/svg';
+    var title = document.createElementNS(NS, 'title');
+    title.textContent = (state.nick.trim() || DEFAULT_NICK) + '의 곱셈 원 아트 (N=' + state.N + ', k=' + state.k + ')';
+    svg.insertBefore(title, svg.firstChild);
+    var t1 = document.createElementNS(NS, 'text');
+    t1.setAttribute('x', '24'); t1.setAttribute('y', '44');
+    t1.setAttribute('font-family', 'Malgun Gothic, Apple SD Gothic Neo, sans-serif');
+    t1.setAttribute('font-size', '28'); t1.setAttribute('font-weight', '700'); t1.setAttribute('fill', T.label);
+    t1.textContent = (state.nick.trim() || DEFAULT_NICK) + '의 곱셈 원 아트';
+    var t2 = document.createElementNS(NS, 'text');
+    t2.setAttribute('x', '24'); t2.setAttribute('y', '978');
+    t2.setAttribute('font-family', 'Times New Roman, serif');
+    t2.setAttribute('font-size', '26'); t2.setAttribute('fill', T.label);
+    t2.textContent = 'i → (' + state.k + ' × i) mod ' + state.N + '   (N = ' + state.N + ', k = ' + state.k + ')';
+    svg.appendChild(t1); svg.appendChild(t2);
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(svg);
+  }
+
+  function lessonText(){
+    var N = state.N, k = state.k, F = facts(N, k), nick = state.nick.trim() || DEFAULT_NICK;
+    var A = facts(state.pinned.N, state.pinned.k);
+    var today = new Date();
+    var ds = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    var L = [];
+    L.push('곱셈 원 아트 — 수업용 정리');
+    L.push('작품: ' + nick + '의 곱셈 원 아트 (N = ' + N + ', k = ' + k + ')');
+    L.push('저장한 날: ' + ds);
+    L.push('');
+    L.push('[1] 규칙');
+    L.push('원 둘레를 똑같이 ' + N + '등분한 점에 0번부터 ' + (N - 1) + '번까지 번호를 붙이고,');
+    L.push('각 i번 점을 (' + k + ' × i) mod ' + N + '번 점과 선분(직선)으로 잇는다.');
+    L.push('a mod N은 a를 N으로 나눈 나머지로, 항상 0 이상 N − 1 이하의 정수이다.');
+    L.push('');
+    L.push('[2] 왜 나머지 연산인가');
+    L.push('- 원 위의 점은 0 ~ ' + (N - 1) + '번의 ' + N + '개뿐이다. 한 바퀴 돌면 제자리이므로 ' + N + '번째 자리는 0번, ' + (N + 1) + '번째 자리는 1번 점이다.');
+    L.push('  (시계에서 15시를 3시로 읽는 것 = 15를 12로 나눈 나머지 3)');
+    L.push('- ' + k + ' × i = q × ' + N + ' + r (0 ≤ r < ' + N + ')이면 도착점은 r번이다. 즉 ' + k + 'i ≡ r (mod ' + N + ').');
+    L.push('- 이 작품에서는 i ≥ ' + Math.ceil(N / k) + '부터 ' + k + ' × i가 ' + N + ' 이상이 되어 원을 한 바퀴 넘는다.');
+    L.push('- 각도로 보면 i번 점의 각(360° × i ÷ ' + N + ')을 ' + k + '배 한 곳으로 잇는 규칙이다.');
+    L.push('');
+    L.push('[3] 계산 예시 (몫 q = 넘어간 바퀴 수, 나머지 r = 원 위의 실제 위치)');
+    examples(N, k, state.hi).forEach(function(i){
+      var c = calc(i, k, N);
+      L.push('  i = ' + i + ' : ' + calcStr(c, k, N) + '  →  ' + c.r + '번 점' + (c.r === i ? ' (제자리)' : ''));
+    });
+    L.push('');
+    L.push('[4] 이 작품의 수학적 특징');
+    L.push('- 제자리 점: ' + k + 'i ≡ i (mod ' + N + ')인 점 gcd(' + (k - 1) + ', ' + N + ') = ' + F.g1 + '개 (' + listStr(F.fixed, 12) + '번) → 선분 없음');
+    L.push('- 그린 선분 수: ' + N + ' − ' + F.g1 + ' = ' + F.segments + '개');
+    if (F.d === 1) L.push('- gcd(' + k + ', ' + N + ') = 1 → 모든 점이 정확히 한 번씩 도착점이 된다(도착점 ' + F.targets + '개).');
+    else L.push('- gcd(' + k + ', ' + N + ') = ' + F.d + ' → 도착점은 ' + F.d + '의 배수 번호 ' + F.targets + '개뿐이고, 각 도착점에 선분이 ' + F.d + '개씩 모인다.');
+    L.push('- 보이는 곡선(포락선): ' + F.curve + '. 점이 많을수록 첨점이 k − 1 = ' + F.cusps + '개인 에피사이클로이드에 가까워진다.');
+    L.push('  첨점은 각을 ' + k + '배 해도 제자리인 위치 θ = 360° × m ÷ ' + (k - 1) + ' (' + F.cuspAngles.join(', ') + ')에서 원에 닿는다.');
+    L.push('- 곡선은 실제로 그리지 않았다. 모두 직선이며, 곡선은 직선들이 감싸서 생긴 모양이다.');
+    L.push('');
+    L.push('[5] 비교 관찰 (A: N = ' + A.N + ', k = ' + A.k + ' / 지금: N = ' + N + ', k = ' + k + ')');
+    cmpRows(A, F).forEach(function(r){ L.push('  ' + r[0] + ': A ' + r[1] + ' / 지금 ' + r[2] + (r[1] !== r[2] ? '  ← 다름' : '')); });
+    L.push('');
+    L.push('[6] 수업 발문 예시');
+    L.push('  1) k를 1 늘리면 뾰족한 점은 몇 개 늘어나는가? 그 이유를 “각을 k배 한다”로 설명해 보자.');
+    L.push('  2) N = 30과 N = 240에서 같은 k의 그림은 무엇이 같고 무엇이 다른가?');
+    L.push('  3) N = 200, k = 10에서 도착점이 20개뿐인 이유를 나머지로 설명해 보자.');
+    L.push('  4) N = 200, k = 3과 N = 201, k = 3에서 제자리 점의 개수가 다른 이유는?');
+    L.push('');
+    L.push('[7] 나의 수학 설명 한 문장');
+    L.push('  ' + ($('sentence').value.trim() || '(아직 쓰지 않음)'));
+    L.push('');
+    L.push('[8] 관찰 메모');
+    var memo = $('memo').value.trim();
+    L.push(memo ? memo.split(/\r?\n/).map(function(s){ return '  ' + s; }).join('\n') : '  (아직 쓰지 않음)');
+    L.push('');
+    L.push('그림 설정: 배경 ' + THEMES[state.theme].name + ', 선 색 ' + (state.colorMode === 'mono' ? '한 가지 색 ' + safeColor(state.color) : '무지개(i에 따라)') +
+           ', 0번 점 ' + (state.start === 'top' ? '위쪽(90°)' : '오른쪽(0°)') + ', 번호 방향 ' + (state.dir === 'cw' ? '시계 방향' : '시계 반대 방향'));
+    return L.join('\n') + '\n';
+  }
+
+  $('saveSvg').addEventListener('click', function(){
+    var s;
+    try { s = buildSVG(); }
+    catch (e) { showSave('그림 파일을 만들지 못했어요: ' + (e && e.message ? e.message : '알 수 없는 오류'), 'err'); return; }
+    download(s, baseName() + '.svg', 'image/svg+xml;charset=utf-8');
+  });
+  $('saveTxt').addEventListener('click', function(){
+    download('﻿' + lessonText().replace(/\n/g, '\r\n'), baseName() + '_수업자료.txt', 'text/plain;charset=utf-8');
+  });
+  $('copyTxt').addEventListener('click', function(){
+    var text = lessonText();
+    function fallback(){
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed'; ta.style.top = '-1000px';
+        document.body.appendChild(ta); ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) showSave('수업용 텍스트를 복사했어요. 문서나 메모장에 붙여 넣으세요.', 'ok');
+        else throw new Error('복사 명령이 거부되었어요.');
+      } catch (e) {
+        showSave('복사하지 못했어요: ' + (e && e.message ? e.message : '알 수 없는 오류') + ' ‘수업용 텍스트 저장’을 쓰거나 다른 브라우저에서 시도해 주세요.', 'err');
+      }
+    }
+    if (navigator.clipboard && window.isSecureContext){
+      navigator.clipboard.writeText(text).then(function(){
+        showSave('수업용 텍스트를 복사했어요. 문서나 메모장에 붙여 넣으세요.', 'ok');
+      }, fallback);
+    } else fallback();
+  });
+
+  /* ---------- 시작 ---------- */
+  loadLocal();
+  update();
+})();
+</script>
+</body>
+</html>
