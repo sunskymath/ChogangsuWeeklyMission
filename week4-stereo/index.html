@@ -10,7 +10,7 @@
   - 도형은 SHAPES에 등록합니다. 각 도형은 설정 값(controls)과 3D 선분을 만드는 build()만 가지며,
     입체 장치(두 눈 투영, 평행법/교차법, 회전, 저장)는 모든 도형이 함께 씁니다.
 -->
-<meta name="description" content="직선만으로 만든 일엽쌍곡면을 평행법·교차법 입체사진으로 보는 실험. 두 그림을 멍하니 바라보면 입체로 떠올라요.">
+<meta name="description" content="일엽쌍곡면과 토러스 매듭을 평행법·교차법 입체사진으로 보는 실험. 두 그림을 멍하니 바라보면 입체로 떠올라요.">
 <meta name="theme-color" content="#3A55C7">
 <meta name="referrer" content="no-referrer">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B0D1F'/%3E%3Cpath d='M12 10 L28 54 M28 10 L12 54 M36 10 L52 54 M52 10 L36 54' stroke='%23FFB347' stroke-width='3'/%3E%3C/svg%3E">
@@ -189,7 +189,7 @@
 
   <header class="top">
     <p class="eyebrow">4주차 번외 · 수학 입체사진</p>
-    <h1>직선으로 만든 곡면, 입체로 보기</h1>
+    <h1>수학 도형, 입체로 보기</h1>
     <p class="sub">같은 도형을 왼눈 위치와 오른눈 위치에서 본 그림 두 장이에요. 멍하니 바라보거나(평행법) 눈을 살짝 모으면(교차법) 가운데에 입체 도형이 떠올라요.</p>
   </header>
 
@@ -388,8 +388,117 @@
       },
       fileTag: function(p){ return '일엽쌍곡면_N' + p.N + '_s' + p.s; },
       describe: function(p){ return '일엽쌍곡면: 점 ' + p.N + '개, ' + p.s + '칸 비틀어 이은 직선들'; }
+    },
+
+    torusKnot: {
+      label: '토러스 매듭',
+      lead: '도넛(토러스) 겉면을 따라, 구멍 둘레로 p번 돌면서 튜브 둘레로 q번 감는 곡선이에요.',
+      view: { yaw: 0, pitch: 70 },
+      controls: [
+        { key:'p', type:'int', label:'구멍 둘레를 도는 횟수 p', min:function(){ return 1; }, max:function(){ return 9; }, def:2 },
+        { key:'q', type:'int', label:'튜브를 감는 횟수 q', min:function(){ return 1; }, max:function(){ return 9; }, def:3,
+          hint:'(2, 3)은 세잎매듭이에요. p와 q의 최대공약수가 1이 아니면 여러 고리로 갈라져요.' },
+        { key:'r', type:'range', label:'튜브 굵기 (도넛 반지름 1에 대한 비율)', min:0.2, max:0.6, step:0.05, def:0.4, fmt:function(v){ return v.toFixed(2); } },
+        { key:'torus', type:'check', label:'도넛 표면 보조선 표시', def:true },
+        { key:'color', type:'choice', label:'선 색', def:'rainbow',
+          options:[ ['rainbow', '무지개 (따라가며)'], ['component', '고리마다 한 색'] ] }
+      ],
+      build: function(p){
+        var P = p.p, Q = p.q, d = gcd(P, Q), pp = P / d, qq = Q / d, R = 1, r = p.r;
+        var k = 1.45 / (R + r);
+        function T(u, v){ var rho = R + r * Math.cos(v); return [k * rho * Math.cos(u), k * r * Math.sin(v), k * rho * Math.sin(u)]; }
+        var segs = [], guides = [];
+        var steps = 60 * (pp + qq) + 120;
+        for (var m = 0; m < d; m++){
+          var off = 2 * Math.PI * m / (d * qq);        // 고리들이 겹치지 않게 같은 간격으로 밀어 둠
+          var prev = T(off, 0);
+          for (var s = 1; s <= steps; s++){
+            var t = 2 * Math.PI * s / steps;
+            var cur = T(pp * t + off, qq * t);
+            var color = p.color === 'component' ? KNOT_COLORS[m % KNOT_COLORS.length]
+                      : 'hsl(' + Math.round(360 * (s - 0.5) / steps + 360 * m / d) % 360 + ',90%,64%)';
+            segs.push({ a:prev, b:cur, color:color });
+            prev = cur;
+          }
+        }
+        if (p.torus){
+          [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2].forEach(function(v){
+            guides.push({ pts:circle(k * (R + r * Math.cos(v)), k * r * Math.sin(v), 96), color:'#3A3F70' });
+          });
+          for (var j = 0; j < 16; j++){
+            var u = 2 * Math.PI * j / 16, pts = [];
+            for (var i = 0; i <= 32; i++) pts.push(T(u, 2 * Math.PI * i / 32));
+            guides.push({ pts:pts, color:'#3A3F70' });
+          }
+        }
+        return { segs:segs, guides:guides, halo:true, width:2.2 };
+      },
+      explain: function(p){
+        var P = p.p, Q = p.q, d = gcd(P, Q), lo = Math.min(P, Q), hi = Math.max(P, Q);
+        var html = '';
+        html += '<div class="eq">x = (1 + r cos ' + Q + 'θ) cos ' + P + 'θ, &nbsp; z = (1 + r cos ' + Q + 'θ) sin ' + P + 'θ, &nbsp; y = r sin ' + Q + 'θ</div>';
+        html += '<p><span class="m">θ</span>가 0에서 360°까지 가는 동안 구멍 둘레 각(<span class="m">' + P + 'θ</span>)은 ' + P + '바퀴, 튜브 둘레 각(<span class="m">' + Q + 'θ</span>)은 ' + Q + '바퀴 돌아요. 도넛 반지름은 1, 튜브 반지름은 <span class="m">r = ' + p.r.toFixed(2) + '</span>이에요.</p>';
+
+        html += '<h3>1. 도넛을 펼치면 직선이에요</h3>';
+        html += '<p>도넛을 한 번 가로로, 한 번 세로로 잘라 펼치면 정사각형이 돼요. 가로는 구멍 둘레 각, 세로는 튜브 둘레 각(둘 다 0°~360°)이에요. 그 위에서 이 곡선은 기울기 <span class="m">' + Q + ' ÷ ' + P + '</span>인 <b>직선</b>이에요. ' +
+                '오른쪽 끝을 넘으면 왼쪽에서, 위 끝을 넘으면 아래에서 다시 나와요. 각을 360°로 나눈 <b>나머지</b>만 보는 셈이라 4주차의 mod와 같은 생각이에요.</p>';
+        html += '<div style="text-align:center;margin:0 0 12px">' + flatSquare(P, Q) + '</div>';
+
+        html += '<h3>2. 최대공약수가 모양을 정해요</h3>';
+        if (d === 1){
+          var name = KNOT_NAMES[lo + ',' + hi];
+          if (lo === 1){
+            html += '<div class="fact"><b>gcd(' + P + ', ' + Q + ') = 1, 하지만 ' + (P === 1 ? 'p' : 'q') + ' = 1: 풀린 매듭.</b> 한 줄로 이어진 닫힌 곡선이지만, 잡아당기면 그냥 동그라미로 풀려요. 수학에서는 이것을 ‘자명한 매듭(unknot)’이라고 해요.</div>';
+          } else {
+            var cross = Math.min(P * (Q - 1), Q * (P - 1));
+            html += '<div class="fact"><b>gcd(' + P + ', ' + Q + ') = 1: 끊김 없는 매듭 하나' + (name ? ' — ' + name : '') + '.</b> 한 줄로 이어져 처음 자리로 돌아와요. ' +
+                    '이 매듭을 평면에 그릴 때 꼭 필요한 최소 교차 수는 <span class="m">min(p(q − 1), q(p − 1)) = ' + cross + '</span>번이에요. ' +
+                    '위에서 내려다보면 <span class="m">360° ÷ ' + Q + '</span>만큼 돌려도 같은 모양(' + Q + '겹 회전대칭)이에요.</div>';
+          }
+        } else {
+          var lname = KNOT_NAMES[lo + ',' + hi];
+          html += '<div class="fact"><b>gcd(' + P + ', ' + Q + ') = ' + d + ': 고리 ' + d + '개가 얽힌 ‘토러스 링크’' + (lname ? ' — ' + lname : '') + '.</b> 펼친 정사각형에서 직선이 처음 자리로 돌아오기 전에 닫혀 버려서, 한 줄로 다 못 그리고 ' + d + '줄이 필요해요. ' +
+                  '각 고리는 (' + (P / d) + ', ' + (Q / d) + ') 곡선이에요. ‘고리마다 한 색’으로 바꾸면 잘 보여요.</div>';
+        }
+        html += '<h3>3. 이것저것 관찰해 보기</h3><ul>';
+        html += '<li>(p, q)와 (q, p)는 생김새는 달라도 같은 매듭이에요. 줄을 끊지 않고 움직여서 서로 바꿀 수 있어요. (2, 3)과 (3, 2)를 비교해 보세요.</li>';
+        html += '<li>(2, 3) → (2, 5) → (2, 7)처럼 q만 키우면 꽃잎이 늘어나요. (2, 4), (3, 6)처럼 공약수가 있으면 고리가 갈라져요.</li>';
+        html += '<li>위에서 내려다볼수록(기울기 70°~80°) 매듭 모양이 잘 보이고, 선이 위아래로 엇갈리는 곳에서 입체감이 커요.</li>';
+        html += '</ul>';
+        return html;
+      },
+      fileTag: function(p){ return '토러스매듭_p' + p.p + '_q' + p.q; },
+      describe: function(p){ return '토러스 매듭 (' + p.p + ', ' + p.q + ')'; }
     }
   };
+
+  var KNOT_COLORS = ['#FFB347', '#5CD6FF', '#FF6FA8', '#9BE15D', '#C9A0FF', '#FFE45C', '#5CFFC8', '#FF8A5C', '#8AB4FF'];
+  var KNOT_NAMES = {
+    '2,3':'세잎매듭(트레포일)', '2,5':'5₁ 매듭(별 모양 매듭)', '2,7':'7₁ 매듭', '2,9':'9₁ 매듭',
+    '3,4':'8₁₉ 매듭', '3,5':'10₁₂₄ 매듭',
+    '2,2':'호프 링크', '2,4':'솔로몬 링크'
+  };
+
+  // 펼친 도넛(정사각형) 위의 직선 그림
+  function flatSquare(P, Q){
+    var S = 180, d = gcd(P, Q), pp = P / d, qq = Q / d, out = [];
+    out.push('<svg viewBox="-10 -10 ' + (S + 20) + ' ' + (S + 20) + '" width="200" height="200" role="img" aria-label="펼친 도넛 위의 기울기 ' + Q + '/' + P + ' 직선">');
+    out.push('<rect x="0" y="0" width="' + S + '" height="' + S + '" fill="#0B0D1F" stroke="#6F76B8" stroke-width="1.5"/>');
+    for (var m = 0; m < d; m++){
+      var off = 1 / (d * qq), n = 1200, x0 = null, y0 = null, path = '';
+      for (var s = 0; s <= n; s++){
+        var t = s / n;
+        var x = (pp * t + m * off) % 1, y = (qq * t) % 1;
+        var jump = x0 === null || Math.abs(x - x0) > 0.5 || Math.abs(y - y0) > 0.5;   // 가장자리를 넘어 반대편으로
+        path += (jump ? 'M' : 'L') + (x * S).toFixed(1) + ' ' + ((1 - y) * S).toFixed(1);
+        x0 = x; y0 = y;
+      }
+      out.push('<path d="' + path + '" fill="none" stroke="' + KNOT_COLORS[m % KNOT_COLORS.length] + '" stroke-width="2"/>');
+    }
+    out.push('<text x="' + (S / 2) + '" y="' + (S + 9) + '" fill="#514E72" font-size="9" text-anchor="middle">구멍 둘레 각 0°→360°</text>');
+    out.push('</svg>');
+    return out.join('');
+  }
 
   function circle(r, y, n){
     var pts = [];
@@ -442,16 +551,37 @@
       return { a:a, b:b, z:(a[2] + b[2]) / 2, color:sg.color };
     });
     list.sort(function(u, v){ return u.z - v.z; });   // 먼 선부터 그려서 가까운 선이 위에 오게
+    var ws = model.width || 1;
     list.forEach(function(sg){
       var pa = project(sg.a, ex), pb = project(sg.b, ex);
       var t = Math.max(0, Math.min(1, (sg.z + 1.5) / 3));
-      var op = view.shade ? 0.35 + 0.65 * t : 0.9;
-      var w = view.shade ? 0.8 + 1.4 * t : 1.3;
-      out.push('<line x1="' + f3(pa[0]) + '" y1="' + f3(pa[1]) + '" x2="' + f3(pb[0]) + '" y2="' + f3(pb[1]) + '" stroke="' + sg.color +
-               '" stroke-width="' + w.toFixed(2) + '" stroke-opacity="' + op.toFixed(2) + '" stroke-linecap="round" vector-effect="non-scaling-stroke"/>');
+      var op = model.halo ? 1 : (view.shade ? 0.35 + 0.65 * t : 0.9);
+      var w = ws * (view.shade ? 0.8 + 1.4 * t : 1.3);
+      var xy = 'x1="' + f3(pa[0]) + '" y1="' + f3(pa[1]) + '" x2="' + f3(pb[0]) + '" y2="' + f3(pb[1]) + '"';
+      // 매듭처럼 선이 엇갈리는 도형: 배경색 테두리로 뒤쪽 선을 끊어 앞뒤를 보여 줌
+      if (model.halo) out.push('<line ' + xy + ' stroke="#0B0D1F" stroke-width="' + (w + 4).toFixed(2) + '" stroke-linecap="butt" vector-effect="non-scaling-stroke"/>');
+      var color = sg.color;
+      if (model.halo && view.shade) color = dim(color, 0.45 + 0.55 * t);
+      out.push('<line ' + xy + ' stroke="' + color + '" stroke-width="' + w.toFixed(2) + '" stroke-opacity="' + op.toFixed(2) +
+               '" stroke-linecap="round" vector-effect="non-scaling-stroke"/>');
     });
     if (view.dots) out.push('<circle cx="0" cy="' + (-BOX + 0.13) + '" r="0.06" fill="#FFFFFF"/>');
     return out.join('');
+  }
+
+  // 먼 선을 어둡게: hsl은 밝기를 줄이고, #hex는 배경색 쪽으로 섞음
+  function dim(color, f){
+    var m = /^hsl\((\d+),(\d+)%,(\d+)%\)$/.exec(color);
+    if (m) return 'hsl(' + m[1] + ',' + m[2] + '%,' + Math.round(m[3] * f) + '%)';
+    if (/^#[0-9a-fA-F]{6}$/.test(color)){
+      var bg = [11, 13, 31], hex = '#';
+      for (var i = 0; i < 3; i++){
+        var c = parseInt(color.substr(1 + 2 * i, 2), 16);
+        hex += ('0' + Math.round(bg[i] + (c - bg[i]) * f).toString(16)).slice(-2);
+      }
+      return hex;
+    }
+    return color;
   }
 
   function eyeSep(){ return EYE_MAX * view.depth / 100; }
@@ -513,8 +643,13 @@
     e.preventDefault();
   });
 
+  function shapeView(){ var v = SHAPES[current].view || {}; return { yaw: v.yaw != null ? v.yaw : DEF_VIEW.yaw, pitch: v.pitch != null ? v.pitch : DEF_VIEW.pitch }; }
+
   function selectShape(key){
     current = key;
+    var sv = shapeView();
+    view.yaw = sv.yaw; view.pitch = sv.pitch;
+    syncViewControls();
     buildTabs();
     buildControls();
     update(true);
@@ -657,7 +792,8 @@
   $('dots').addEventListener('change', function(){ view.dots = this.checked; render(false); });
   $('shade').addEventListener('change', function(){ view.shade = this.checked; render(false); });
   $('resetView').addEventListener('click', function(){
-    view.size = DEF_VIEW.size; view.depth = DEF_VIEW.depth; view.yaw = DEF_VIEW.yaw; view.pitch = DEF_VIEW.pitch;
+    var sv = shapeView();
+    view.size = DEF_VIEW.size; view.depth = DEF_VIEW.depth; view.yaw = sv.yaw; view.pitch = sv.pitch;
     syncViewControls(); render(false);
   });
   window.addEventListener('resize', applySize);
