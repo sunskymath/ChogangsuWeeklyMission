@@ -105,6 +105,9 @@
   }
   .modebtn[aria-pressed="true"]{ background:#FFFFFF; border-color:#FFFFFF; color:var(--stage); }
   .modebtn:focus-visible{ outline-color:#FFD54A; }
+  .playbar{ margin-top:-4px; }
+  .playbtn{ min-width:150px; min-height:48px; }
+  .playbtn[aria-pressed="true"]{ background:#FFD54A; border-color:#FFD54A; color:var(--stage); }
   .pair{
     display:flex; justify-content:center; gap:var(--gap, 16px);
     touch-action:none; user-select:none; -webkit-user-select:none; cursor:grab;
@@ -202,6 +205,10 @@
         <button type="button" class="modebtn" data-mode="parallel" aria-pressed="true">평행법 (멍하니 보기)</button>
         <button type="button" class="modebtn" data-mode="cross" aria-pressed="false">교차법 (눈 모으기)</button>
       </div>
+      <div class="modebar playbar" role="group" aria-label="자동 회전">
+        <button type="button" class="modebtn playbtn" id="playBtn" aria-pressed="false" aria-keyshortcuts="Space">▶ 자동 회전</button>
+        <button type="button" class="modebtn playbtn" id="play4Btn" aria-pressed="false" hidden>▶ 4차원 회전</button>
+      </div>
       <div class="pair" id="pair" tabindex="0" role="img" aria-roledescription="입체사진"
            aria-describedby="stageHint">
         <figure class="eye"><svg id="svgL" viewBox="-1.9 -1.9 3.8 3.8" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg><figcaption id="capL">왼눈용</figcaption></figure>
@@ -241,7 +248,12 @@
           <div class="field-head"><label for="pitch">위아래 기울기</label><output class="val" id="pitchOut"></output></div>
           <input id="pitch" type="range" min="-80" max="80" step="1" value="20">
         </div>
-        <label class="check"><input type="checkbox" id="spin"> 천천히 돌리기</label>
+        <label class="check"><input type="checkbox" id="spin"> 자동 회전 (그림 위 ▶ 버튼과 같아요)</label>
+        <div class="field">
+          <div class="field-head"><label for="speed">자동 회전 속도</label><output class="val" id="speedOut"></output></div>
+          <input id="speed" type="range" min="5" max="60" step="5" value="20">
+          <p class="hint">PC에서는 그림을 한 번 누른 뒤 스페이스바로 자동 회전을 켜고 끌 수 있어요.</p>
+        </div>
         <label class="check"><input type="checkbox" id="dots" checked> 맞춤 점 표시 (두 점이 하나로 겹치면 성공)</label>
         <label class="check"><input type="checkbox" id="shade" checked> 가까운 선을 더 진하고 굵게</label>
         <div class="btn-row" style="margin-top:8px">
@@ -585,12 +597,34 @@
         { key:'xw', type:'range', label:'4차원 회전: xw 평면', min:-180, max:180, step:1, def:0, fmt:function(v){ return Math.round(v) + '°'; } },
         { key:'yw', type:'range', label:'4차원 회전: yw 평면', min:-180, max:180, step:1, def:0, fmt:function(v){ return Math.round(v) + '°'; } },
         { key:'zw', type:'range', label:'4차원 회전: zw 평면', min:-180, max:180, step:1, def:0, fmt:function(v){ return Math.round(v) + '°'; } },
-        { key:'auto', type:'check', label:'xw 평면으로 계속 돌리기 (4차원 회전)', def:false },
+        { key:'autoXW', type:'check', label:'xw 평면으로 계속 돌리기', def:false },
+        { key:'autoYW', type:'check', label:'yw 평면으로 계속 돌리기', def:false },
+        { key:'autoZW', type:'check', label:'zw 평면으로 계속 돌리기', def:false },
+        { key:'speed4', type:'range', label:'4차원 회전 속도 (초당)', min:5, max:90, step:5, def:30, fmt:function(v){ return Math.round(v) + '°'; } },
         { key:'reset4', type:'presets', label:'4차원 회전 되돌리기',
           buttons:[ ['4차원 회전 0°로', function(p){ p.xw = 0; p.yw = 0; p.zw = 0; }] ] }
       ],
-      animating: function(p){ return !!p.auto; },
-      tick: function(p, dt){ p.xw = wrapDeg(p.xw + dt * 0.03); },   // 초당 약 30°
+      animLabel: '4차원 회전',
+      animating: function(p){ return !!(p.autoXW || p.autoYW || p.autoZW); },
+      tick: function(p, dt){
+        var d = dt * p.speed4 / 1000;
+        if (p.autoXW) p.xw = wrapDeg(p.xw + d);
+        if (p.autoYW) p.yw = wrapDeg(p.yw + d);
+        if (p.autoZW) p.zw = wrapDeg(p.zw + d);
+      },
+      // 그림 위 ▶ 버튼: 켜져 있으면 모두 끄고(무엇이 켜져 있었는지 기억), 꺼져 있으면 기억한 평면(처음엔 xw)을 다시 켬
+      toggleAnim: function(p){
+        if (this.animating(p)){
+          p.lastAuto = [p.autoXW, p.autoYW, p.autoZW];
+          p.autoXW = p.autoYW = p.autoZW = false;
+        } else {
+          var l = p.lastAuto || [true, false, false];
+          p.autoXW = l[0]; p.autoYW = l[1]; p.autoZW = l[2];
+        }
+      },
+      animWhich: function(p){
+        return ['xw', 'yw', 'zw'].filter(function(k, i){ return [p.autoXW, p.autoYW, p.autoZW][i]; }).join('·');
+      },
       build: function(p){
         var n = +p.dim, V = [], segs = [];
         for (var m = 0; m < (1 << n); m++){
@@ -641,7 +675,9 @@
         html += '<h3>3. 4차원 회전은 “평면”을 돌려요</h3>';
         html += '<p>3차원에서는 축을 중심으로 돌지만, 4차원 회전은 두 방향이 이루는 평면 안에서 일어나요. 예를 들어 xw 회전은 x와 w만 섞고 y, z는 그대로 둬요: ' +
                 '<span class="m">x′ = x cos θ − w sin θ, &nbsp; w′ = x sin θ + w cos θ</span>. ' +
-                '‘계속 돌리기’를 켜면 안쪽 정육면체가 바깥으로 나오고 바깥 것이 안으로 들어가는 것처럼 보여요. 테서랙트가 찌그러지는 게 아니라, 돌아가는 정육면체의 그림자가 바뀌어 보이는 것과 같은 현상이에요.</p>';
+                '‘계속 돌리기’를 켜면 안쪽 정육면체가 바깥으로 나오고 바깥 것이 안으로 들어가는 것처럼 보여요. 테서랙트가 찌그러지는 게 아니라, 돌아가는 정육면체의 그림자가 바뀌어 보이는 것과 같은 현상이에요.</p>' +
+                '<p>xw·yw·zw는 모두 w가 들어간 평면이라 셋 다 “안팎이 뒤집히는” 회전이지만, 섞이는 방향(x, y, z)이 달라서 뒤집히는 방향이 달라요. 여러 평면을 함께 켜면 더 복잡하게 굴러요. ' +
+                '회전은 순서를 바꾸면 결과가 달라질 수 있어서(교환법칙이 성립하지 않음), 이 화면은 항상 xw → yw → zw 순서로 계산해요.</p>';
         html += '<p class="hint">이 화면은 두 번 투영해요: 4차원 → 3차원(그림자 만들기), 3차원 → 두 눈(입체사진). 덕분에 4차원 도형의 그림자를 입체로 볼 수 있어요.</p>';
         return html;
       },
@@ -742,7 +778,7 @@
      입체 장치 (모든 도형이 함께 씀)
      ===================================================================== */
   var DEF_VIEW = { size:230, depth:50, yaw:0, pitch:20 };
-  var view = { mode:'parallel', size:230, depth:50, yaw:0, pitch:20, spin:false, dots:true, shade:true };
+  var view = { mode:'parallel', size:230, depth:50, yaw:0, pitch:20, spin:false, speed:20, dots:true, shade:true };
   var D = 7;               // 눈에서 화면(도형 중심)까지 거리
   var EYE_MAX = 0.6;       // 입체감 100%일 때 두 눈 사이 거리
   var BOX = 1.9;           // viewBox 반폭
@@ -1021,7 +1057,22 @@
   function update(rebuild){
     render(rebuild);
     if (rebuild) $('explain').innerHTML = SHAPES[current].explain(params[current]);
+    syncPlayUI();
     startAnim();
+  }
+
+  // 그림 위 ▶ 버튼 표시 맞추기
+  function syncPlayUI(){
+    var pb = $('playBtn'), p4 = $('play4Btn'), s = SHAPES[current];
+    pb.setAttribute('aria-pressed', String(view.spin));
+    pb.textContent = view.spin ? '⏸ 자동 회전 멈춤' : '▶ 자동 회전';
+    $('spin').checked = view.spin;
+    p4.hidden = !s.toggleAnim;
+    if (s.toggleAnim){
+      var on = shapeAnimating();
+      p4.setAttribute('aria-pressed', String(on));
+      p4.textContent = on ? '⏸ ' + s.animLabel + ' 멈춤 (' + s.animWhich(params[current]) + ')' : '▶ ' + s.animLabel;
+    }
   }
 
   function syncViewControls(){
@@ -1033,10 +1084,10 @@
   }
 
   /* ---------- 입체 설정 조작 ---------- */
-  Array.prototype.forEach.call(document.querySelectorAll('.modebtn'), function(b){
+  Array.prototype.forEach.call(document.querySelectorAll('.modebtn[data-mode]'), function(b){
     b.addEventListener('click', function(){
       view.mode = b.dataset.mode;
-      Array.prototype.forEach.call(document.querySelectorAll('.modebtn'), function(o){ o.setAttribute('aria-pressed', String(o === b)); });
+      Array.prototype.forEach.call(document.querySelectorAll('.modebtn[data-mode]'), function(o){ o.setAttribute('aria-pressed', String(o === b)); });
       $('guideParallel').open = view.mode === 'parallel';
       $('guideCross').open = view.mode === 'cross';
       renderStageHint();
@@ -1084,6 +1135,7 @@
     else if (e.key === 'ArrowRight') rotateBy(step, 0);
     else if (e.key === 'ArrowUp') rotateBy(0, -step);
     else if (e.key === 'ArrowDown') rotateBy(0, step);
+    else if (e.key === ' ' || e.key === 'Spacebar') setSpin(!view.spin);
     else return;
     e.preventDefault();
   });
@@ -1099,13 +1151,24 @@
     if (dt){
       var rebuild = false;
       if (shapeAnimating()){ SHAPES[current].tick(params[current], dt); syncRanges(); rebuild = true; }
-      if (view.spin){ view.yaw = wrapYaw(view.yaw + dt * 0.02); syncViewControls(); }   // 초당 약 20°
+      if (view.spin){ view.yaw = wrapYaw(view.yaw + dt * view.speed / 1000); syncViewControls(); }
       render(rebuild);
     }
     spinRaf = requestAnimationFrame(spinStep);
   }
   function startAnim(){ if (!spinRaf && animActive()) spinRaf = requestAnimationFrame(spinStep); }
-  $('spin').addEventListener('change', function(){ view.spin = this.checked; startAnim(); });
+  function setSpin(on){ view.spin = on; syncPlayUI(); startAnim(); }
+  $('spin').addEventListener('change', function(){ setSpin(this.checked); });
+  $('playBtn').addEventListener('click', function(){ setSpin(!view.spin); });
+  $('play4Btn').addEventListener('click', function(){
+    var s = SHAPES[current];
+    if (!s.toggleAnim) return;
+    s.toggleAnim(params[current]);
+    buildControls();          // 도형 설정의 체크박스도 맞춤
+    update(false);
+  });
+  $('speed').addEventListener('input', function(){ view.speed = +this.value; $('speedOut').textContent = '초당 ' + view.speed + '°'; });
+  $('speedOut').textContent = '초당 ' + view.speed + '°';
 
   /* ---------- 저장 ---------- */
   function showSave(t, kind){ var m = $('saveMsg'); m.textContent = t; m.className = 'msg ' + (kind || ''); }
