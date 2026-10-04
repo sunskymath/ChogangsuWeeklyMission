@@ -469,8 +469,148 @@
       },
       fileTag: function(p){ return '토러스매듭_p' + p.p + '_q' + p.q; },
       describe: function(p){ return '토러스 매듭 (' + p.p + ', ' + p.q + ')'; }
+    },
+
+    polyhedron: {
+      label: '정다면체·준정다면체',
+      lead: '정다면체를 고른 뒤 꼭짓점을 깎아 보세요. 모서리 길이의 t만큼 꼭짓점에서 떨어진 곳을 잘라내면 새로운 다면체가 돼요.',
+      view: { yaw: 20, pitch: 20 },
+      controls: [
+        { key:'base', type:'choice', label:'정다면체', def:'icosa',
+          options:[ ['tetra', '정사면체'], ['cube', '정육면체'], ['octa', '정팔면체'], ['dodeca', '정십이면체'], ['icosa', '정이십면체'] ] },
+        { key:'t', type:'range', label:'깎기 정도 t (0 ~ 0.5)', min:0, max:0.5, step:0.005, def:1 / 3, fmt:function(v){ return v.toFixed(3); } },
+        { key:'tp', type:'presets', label:'깎기 단계 바로 가기',
+          buttons:[
+            ['그대로 (t = 0)', function(p){ p.t = 0; }],
+            ['깎은 다면체 (면이 모두 정다각형)', function(p){ p.t = POLY[p.base].treg; }],
+            ['모서리 중점까지 (t = 0.5)', function(p){ p.t = 0.5; }]
+          ] },
+        { key:'ghost', type:'check', label:'원래 정다면체 겹쳐 보기', def:true }
+      ],
+      build: function(p){
+        var B = POLY[p.base], t = p.t;
+        var V0 = B.verts(), E0 = nearestEdges(V0);
+        var nb = V0.map(function(){ return []; });
+        E0.forEach(function(e){ nb[e[0]].push(e[1]); nb[e[1]].push(e[0]); });
+
+        var verts = [], keyOf = {}, edges = [], edgeSet = {}, kind = [];
+        function addV(v){
+          var key = v.map(function(x){ return Math.round(x * 1e6); }).join(',');
+          if (!(key in keyOf)){ keyOf[key] = verts.length; verts.push(v); }
+          return keyOf[key];
+        }
+        function addE(a, b, k){
+          var key = a < b ? a + '-' + b : b + '-' + a;
+          if (a === b || edgeSet[key]) return;
+          edgeSet[key] = true; edges.push([a, b]); kind.push(k);
+        }
+        if (t < 1e-9){
+          V0.forEach(addV);
+          E0.forEach(function(e){ addE(e[0], e[1], 0); });
+        } else {
+          // near[i][j]: 꼭짓점 i를 깎아 생긴, 모서리 i–j 위의 새 꼭짓점
+          var near = V0.map(function(v, i){
+            var o = {};
+            nb[i].forEach(function(j){ o[j] = addV(lerp(v, V0[j], t)); });
+            return o;
+          });
+          E0.forEach(function(e){ addE(near[e[0]][e[1]], near[e[1]][e[0]], 0); });   // 남은 원래 모서리
+          V0.forEach(function(v, i){                                            // 잘린 자리에 생긴 새 면의 모서리
+            var ids = nb[i].map(function(j){ return near[i][j]; });
+            var best = Infinity, pairs = [];
+            for (var a = 0; a < ids.length; a++) for (var b = a + 1; b < ids.length; b++){
+              var dd = dist(verts[ids[a]], verts[ids[b]]);
+              if (dd < best - 1e-7){ best = dd; pairs = [[ids[a], ids[b]]]; }
+              else if (Math.abs(dd - best) <= 1e-7) pairs.push([ids[a], ids[b]]);
+            }
+            pairs.forEach(function(pr){ addE(pr[0], pr[1], 1); });
+          });
+        }
+        // 크기 맞추기: 가장 먼 꼭짓점이 반지름 1.5에 오도록 (원래 다면체도 같은 비율)
+        var R = 0;
+        verts.forEach(function(v){ R = Math.max(R, Math.hypot(v[0], v[1], v[2])); });
+        var k = 1.5 / R;
+        function S(v){ return [v[0] * k, v[1] * k, v[2] * k]; }
+        var segs = edges.map(function(e, i){
+          return { a:S(verts[e[0]]), b:S(verts[e[1]]), color: kind[i] ? '#5CD6FF' : '#FFB347' };
+        });
+        var guides = [];
+        if (p.ghost && t > 1e-9) E0.forEach(function(e){ guides.push({ pts:[S(V0[e[0]]), S(V0[e[1]])], color:'#4A4F86', dash:true }); });
+        return { segs:segs, guides:guides, halo:true, width:1.8, count:{ V:verts.length, E:edges.length } };
+      },
+      explain: function(p){
+        var B = POLY[p.base], t = p.t, m = this.build(p).count;
+        var stage = t < 1e-9 ? 0 : (Math.abs(t - 0.5) < 1e-9 ? 2 : (Math.abs(t - B.treg) < 1e-9 ? 1 : 3));
+        var F = stage === 0 ? B.F : B.F + B.V;
+        var name = [B.name, B.trunc, B.half, '“' + B.name + '”를 깎는 중간 단계'][stage];
+        var faces;
+        if (stage === 0) faces = B.F + '개의 정' + POLY_GON[B.p];
+        else if (stage === 2) faces = '정' + POLY_GON[B.p] + ' ' + B.F + '개 + 정' + POLY_GON[B.q] + ' ' + B.V + '개';
+        else faces = (stage === 1 ? '정' : '') + POLY_GON[2 * B.p] + ' ' + B.F + '개 + 정' + POLY_GON[B.q] + ' ' + B.V + '개' +
+                     (stage === 3 ? ' (' + POLY_GON[2 * B.p] + '은 아직 정다각형이 아님)' : '');
+        var html = '';
+        html += '<div class="eq">' + name + '</div>';
+        html += '<div class="fact"><b>꼭짓점 V = ' + m.V + ', 모서리 E = ' + m.E + ', 면 F = ' + F + '</b><br>' +
+                '오일러 공식: <span class="m">V − E + F = ' + m.V + ' − ' + m.E + ' + ' + F + ' = ' + (m.V - m.E + F) + '</span><br>' +
+                '면: ' + faces + '</div>';
+
+        html += '<h3>1. 꼭짓점을 깎으면</h3>';
+        html += '<p>' + B.name + '의 꼭짓점 하나에는 모서리 ' + B.q + '개가 모여요. 꼭짓점마다 모서리 길이의 <span class="m">t</span>만큼 떨어진 곳을 잘라내면 그 자리에 정' + POLY_GON[B.q] + ' 면이 새로 생기고(하늘색 선), ' +
+                '원래 정' + POLY_GON[B.p] + ' 면은 귀퉁이가 잘려 ' + POLY_GON[2 * B.p] + '이 돼요(주황색 선). 그래서 면은 원래 ' + B.F + '개에 꼭짓점 수 ' + B.V + '개만큼 늘어나요.</p>';
+        html += '<p>새로 생긴 ' + POLY_GON[2 * B.p] + '까지 정다각형이 되는 건 남은 모서리와 잘린 자리의 길이가 같을 때예요. 정' + POLY_GON[B.p] + '의 한 내각을 생각하면 ' +
+                '<span class="m">1 − 2t = 2t × cos(180° ÷ ' + B.p + ')</span>, 즉 <span class="m">t = 1 ÷ (2 + 2cos(180° ÷ ' + B.p + ')) ≈ ' + B.treg.toFixed(4) + '</span>일 때 <b>' + B.trunc + '</b>가 돼요.</p>';
+        html += '<p><span class="m">t = 0.5</span>까지 깎으면 원래 모서리가 다 사라지고 모서리의 중점만 남아 <b>' + B.half + '</b>가 돼요.</p>';
+
+        html += '<h3>2. 이것저것 관찰해 보기</h3><ul>';
+        html += '<li>정육면체와 정팔면체, 정십이면체와 정이십면체는 서로 <b>쌍대</b>예요(면의 중심을 이으면 서로가 됨). 그래서 모서리 중점까지 깎으면 똑같이 육팔면체, 십이이십면체가 나와요. 정사면체는 자기 자신과 쌍대라서 중점까지 깎으면 정팔면체가 돼요.</li>';
+        html += '<li>정이십면체를 <span class="m">t = 1/3</span>로 깎은 깎은 정이십면체는 정오각형 12개, 정육각형 20개로 된 축구공 모양이에요.</li>';
+        html += '<li>정다면체가 다섯 개뿐인 이유: 한 꼭짓점에 모이는 면의 각을 더하면 360°보다 작아야 볼록하게 접혀요. 정삼각형 3·4·5개, 정사각형 3개, 정오각형 3개만 가능해요.</li>';
+        html += '<li>슬라이더를 천천히 움직이면 어떤 t에서든 <span class="m">V − E + F = 2</span>가 유지돼요.</li>';
+        html += '</ul>';
+        return html;
+      },
+      fileTag: function(p){ return '다면체_' + POLY[p.base].name + '_t' + p.t.toFixed(3); },
+      describe: function(p){ return POLY[p.base].name + ' (깎기 t = ' + p.t.toFixed(3) + ')'; }
     }
   };
+
+  /* ---------- 다면체 자료 ---------- */
+  var PHI = (1 + Math.sqrt(5)) / 2;
+  function cyc(list){ var out = []; list.forEach(function(v){ out.push(v, [v[1], v[2], v[0]], [v[2], v[0], v[1]]); }); return out; }
+  function signs(v){
+    var out = [];
+    [1, -1].forEach(function(a){ [1, -1].forEach(function(b){ [1, -1].forEach(function(c){
+      var w = [v[0] * a, v[1] * b, v[2] * c], key = w.join();
+      if (!out.some(function(o){ return o.join() === key; })) out.push(w);
+    }); }); });
+    return out;
+  }
+  function treg(p){ return 1 / (2 + 2 * Math.cos(Math.PI / p)); }
+  var POLY = {
+    tetra:  { name:'정사면체',   p:3, q:3, V:4,  F:4,  trunc:'깎은 정사면체', half:'정팔면체',
+              verts:function(){ return [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]]; } },
+    cube:   { name:'정육면체',   p:4, q:3, V:8,  F:6,  trunc:'깎은 정육면체', half:'육팔면체',
+              verts:function(){ return signs([1, 1, 1]); } },
+    octa:   { name:'정팔면체',   p:3, q:4, V:6,  F:8,  trunc:'깎은 정팔면체', half:'육팔면체',
+              verts:function(){ return [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]; } },
+    dodeca: { name:'정십이면체', p:5, q:3, V:20, F:12, trunc:'깎은 정십이면체', half:'십이이십면체',
+              verts:function(){ return signs([1, 1, 1]).concat(cyc(signs([0, 1 / PHI, PHI]))); } },
+    icosa:  { name:'정이십면체', p:3, q:5, V:12, F:20, trunc:'깎은 정이십면체(축구공)', half:'십이이십면체',
+              verts:function(){ return cyc(signs([0, 1, PHI])); } }
+  };
+  Object.keys(POLY).forEach(function(k){ POLY[k].treg = treg(POLY[k].p); });
+  var POLY_GON = { 3:'삼각형', 4:'사각형', 5:'오각형', 6:'육각형', 8:'팔각형', 10:'십각형' };
+
+  function dist(a, b){ return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]); }
+  function lerp(a, b, t){ return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+  // 정다면체의 모서리 = 가장 가까운 꼭짓점 쌍
+  function nearestEdges(V){
+    var best = Infinity, i, j;
+    for (i = 0; i < V.length; i++) for (j = i + 1; j < V.length; j++) best = Math.min(best, dist(V[i], V[j]));
+    var E = [];
+    for (i = 0; i < V.length; i++) for (j = i + 1; j < V.length; j++) if (dist(V[i], V[j]) < best * 1.001) E.push([i, j]);
+    return E;
+  }
 
   var KNOT_COLORS = ['#FFB347', '#5CD6FF', '#FF6FA8', '#9BE15D', '#C9A0FF', '#FFE45C', '#5CFFC8', '#FF8A5C', '#8AB4FF'];
   var KNOT_NAMES = {
@@ -709,6 +849,28 @@
         });
         wrap.style.marginTop = '10px';
         wrap.appendChild(fs);
+        box.appendChild(wrap);
+      } else if (c.type === 'presets'){
+        // 버튼 한 번으로 여러 값을 정해진 값으로 맞춤 (예: 깎기 정도 t)
+        var row = document.createElement('div');
+        row.className = 'btn-row';
+        row.setAttribute('role', 'group');
+        row.setAttribute('aria-label', c.label);
+        c.buttons.forEach(function(bt){
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'btn btn-ghost btn-small';
+          b.textContent = bt[0];
+          b.addEventListener('click', function(){
+            bt[1](p);
+            buildControls();
+            update(true);
+            var again = box.querySelectorAll('[aria-label="' + c.label + '"] button')[c.buttons.indexOf(bt)];
+            if (again) again.focus();
+          });
+          row.appendChild(b);
+        });
+        wrap.style.marginTop = '-4px';
+        wrap.appendChild(row);
         box.appendChild(wrap);
       }
     });
