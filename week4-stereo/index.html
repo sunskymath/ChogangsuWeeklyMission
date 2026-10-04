@@ -571,8 +571,100 @@
       },
       fileTag: function(p){ return '다면체_' + POLY[p.base].name + '_t' + p.t.toFixed(3); },
       describe: function(p){ return POLY[p.base].name + ' (깎기 t = ' + p.t.toFixed(3) + ')'; }
+    },
+
+    tesseract: {
+      label: '테서랙트 (4차원)',
+      lead: '4차원 정육면체(초입방체)를 3차원으로 비춘 그림자예요. 입체사진으로 보면 그 그림자를 진짜 입체로 볼 수 있어요.',
+      view: { yaw: 30, pitch: 20 },
+      controls: [
+        { key:'dim', type:'choice', label:'차원 사다리', def:'4',
+          options:[ ['1', '선분 (1차원)'], ['2', '정사각형 (2차원)'], ['3', '정육면체 (3차원)'], ['4', '테서랙트 (4차원)'] ] },
+        { key:'proj', type:'choice', label:'4차원 → 3차원 투영', def:'persp',
+          options:[ ['persp', '원근 (정육면체 안의 정육면체)'], ['ortho', '평행'] ] },
+        { key:'xw', type:'range', label:'4차원 회전: xw 평면', min:-180, max:180, step:1, def:0, fmt:function(v){ return Math.round(v) + '°'; } },
+        { key:'yw', type:'range', label:'4차원 회전: yw 평면', min:-180, max:180, step:1, def:0, fmt:function(v){ return Math.round(v) + '°'; } },
+        { key:'zw', type:'range', label:'4차원 회전: zw 평면', min:-180, max:180, step:1, def:0, fmt:function(v){ return Math.round(v) + '°'; } },
+        { key:'auto', type:'check', label:'xw 평면으로 계속 돌리기 (4차원 회전)', def:false },
+        { key:'reset4', type:'presets', label:'4차원 회전 되돌리기',
+          buttons:[ ['4차원 회전 0°로', function(p){ p.xw = 0; p.yw = 0; p.zw = 0; }] ] }
+      ],
+      animating: function(p){ return !!p.auto; },
+      tick: function(p, dt){ p.xw = wrapDeg(p.xw + dt * 0.03); },   // 초당 약 30°
+      build: function(p){
+        var n = +p.dim, V = [], segs = [];
+        for (var m = 0; m < (1 << n); m++){
+          var v = [0, 0, 0, 0];
+          for (var a = 0; a < n; a++) v[a] = (m >> a) & 1 ? 1 : -1;
+          V.push(v);
+        }
+        var P = V.map(function(v){
+          var w = rot4(v, p.xw, p.yw, p.zw);
+          var f = p.proj === 'persp' ? TES_D / (TES_D - w[3]) : 1;     // w 쪽 카메라에서 본 원근
+          return [w[0] * f * TES_S, w[1] * f * TES_S, w[2] * f * TES_S];
+        });
+        for (var i = 0; i < V.length; i++) for (var b = 0; b < n; b++){
+          var j = i ^ (1 << b);                                       // 좌표 하나만 다른 꼭짓점 = 모서리
+          if (j > i) segs.push({ a:P[i], b:P[j], color:TES_COLORS[b] });
+        }
+        return { segs:segs, guides:[], halo:true, width:2 };
+      },
+      explain: function(p){
+        var n = +p.dim, html = '';
+        var names = ['점', '선분', '정사각형', '정육면체', '테서랙트'];
+        html += '<div class="eq">' + names[n] + ': 꼭짓점 ' + (1 << n) + ' · 모서리 ' + (n * (1 << (n - 1))) + '</div>';
+        html += '<p>모서리 색은 방향을 나타내요: ' +
+                ['x', 'y', 'z', 'w'].slice(0, n).map(function(ax, i){
+                  return '<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' + TES_COLORS[i] + ';vertical-align:middle;margin:0 3px 0 6px"></span>' + ax + ' 방향';
+                }).join('') + (n === 4 ? '. 노란 선이 4번째 방향(w)이에요.' : '.') + '</p>';
+
+        html += '<h3>1. 한 차원 올리기 = 복사해서 잇기</h3>';
+        html += '<p>점을 옆으로 밀면 선분, 선분을 밀면 정사각형, 정사각형을 밀면 정육면체가 돼요. 정육면체를 우리가 가리킬 수 없는 <b>네 번째 방향 w</b>로 밀면 테서랙트예요. ' +
+                '밀 때마다 원래 도형과 복사본이 생기고, 대응하는 꼭짓점끼리 새 모서리로 이어져요. 그래서 꼭짓점은 2배, 모서리는 “2배 + 이전 꼭짓점 수”가 돼요.</p>';
+        html += '<div class="tbl-wrap" style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:15px">' +
+                '<thead><tr>' + ['', '꼭짓점', '모서리', '정사각형 면', '정육면체 칸'].map(function(h){ return '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink-soft)">' + h + '</th>'; }).join('') + '</tr></thead><tbody>';
+        for (var d = 0; d <= 4; d++){
+          var cnt = [0, 1, 2, 3].map(function(k){ return k <= d ? binom(d, k) * Math.pow(2, d - k) : 0; });
+          var on = d === n ? ' style="background:var(--amber-soft)"' : '';
+          var cell = function(v, k){ return '<td class="m" style="padding:6px 8px;border-bottom:1px solid var(--line)">' + (k <= d ? v : '–') + '</td>'; };
+          html += '<tr' + on + '><th scope="row" style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)">' + names[d] + '</th>' +
+                  cell(cnt[0], 0) + cell(cnt[1], 1) + cell(cnt[2], 2) + cell(cnt[3], 3) + '</tr>';
+        }
+        html += '</tbody></table></div>';
+        html += '<p class="hint" style="margin-bottom:10px">n차원 입방체에서 k차원 조각의 수는 <span class="m">C(n, k) × 2<sup>n − k</sup></span>예요. 정육면체의 8 − 12 + 6 = 2는 오일러 공식이고, 테서랙트의 겉(꼭짓점·모서리·면·칸)으로 같은 계산을 하면 16 − 32 + 24 − 8 = 0이 돼요.</p>';
+
+        html += '<h3>2. 정육면체 안의 정육면체는 그림자예요</h3>';
+        html += '<p>정육면체를 종이에 원근법으로 그리면 “큰 사각형 안의 작은 사각형”이 돼요. 먼 면이 작게 보이기 때문이에요. 똑같이 테서랙트를 w 방향에서 원근으로 비추면 ' +
+                '가까운 쪽(<span class="m">w = +1</span>) 정육면체는 크게, 먼 쪽(<span class="m">w = −1</span>) 정육면체는 작게 보여서 <b>정육면체 안의 정육면체</b>가 돼요. ' +
+                '사이의 잘린 피라미드 6개도 실제로는 모두 똑같은 정육면체예요. 테서랙트는 정육면체 칸 8개로 둘러싸여 있어요.</p>';
+
+        html += '<h3>3. 4차원 회전은 “평면”을 돌려요</h3>';
+        html += '<p>3차원에서는 축을 중심으로 돌지만, 4차원 회전은 두 방향이 이루는 평면 안에서 일어나요. 예를 들어 xw 회전은 x와 w만 섞고 y, z는 그대로 둬요: ' +
+                '<span class="m">x′ = x cos θ − w sin θ, &nbsp; w′ = x sin θ + w cos θ</span>. ' +
+                '‘계속 돌리기’를 켜면 안쪽 정육면체가 바깥으로 나오고 바깥 것이 안으로 들어가는 것처럼 보여요. 테서랙트가 찌그러지는 게 아니라, 돌아가는 정육면체의 그림자가 바뀌어 보이는 것과 같은 현상이에요.</p>';
+        html += '<p class="hint">이 화면은 두 번 투영해요: 4차원 → 3차원(그림자 만들기), 3차원 → 두 눈(입체사진). 덕분에 4차원 도형의 그림자를 입체로 볼 수 있어요.</p>';
+        return html;
+      },
+      fileTag: function(p){ return '테서랙트_' + p.dim + '차원_xw' + Math.round(p.xw) + '_yw' + Math.round(p.yw) + '_zw' + Math.round(p.zw); },
+      describe: function(p){ return ['', '선분', '정사각형', '정육면체', '테서랙트'][+p.dim] + ' (4차원 회전 xw ' + Math.round(p.xw) + '°, yw ' + Math.round(p.yw) + '°, zw ' + Math.round(p.zw) + '°)'; }
     }
   };
+
+  /* ---------- 테서랙트 도우미 ---------- */
+  var TES_D = 4;            // 4차원 카메라의 w 위치
+  var TES_S = 0.75;         // 3차원 크기 맞춤
+  var TES_COLORS = ['#FF6B6B', '#7CE38B', '#5CA8FF', '#FFD54A'];
+  function wrapDeg(a){ return ((a + 180) % 360 + 360) % 360 - 180; }
+  function binom(n, k){ var r = 1; for (var i = 1; i <= k; i++) r = r * (n - k + i) / i; return Math.round(r); }
+  function rot4(v, xw, yw, zw){
+    var out = v.slice();
+    [[0, xw], [1, yw], [2, zw]].forEach(function(pl){
+      var a = pl[1] * Math.PI / 180, c = Math.cos(a), s = Math.sin(a), i = pl[0];
+      var x = out[i], w = out[3];
+      out[i] = x * c - w * s; out[3] = x * s + w * c;
+    });
+    return out;
+  }
 
   /* ---------- 다면체 자료 ---------- */
   var PHI = (1 + Math.sqrt(5)) / 2;
@@ -795,12 +887,14 @@
     update(true);
   }
 
-  var intCtl = {};
+  var intCtl = {}, rangeCtl = {};
+  // 애니메이션처럼 코드가 값을 바꿨을 때 슬라이더 표시를 맞춤
+  function syncRanges(){ Object.keys(rangeCtl).forEach(function(k){ rangeCtl[k](); }); }
   function buildControls(){
     var shape = SHAPES[current], p = params[current], box = $('shapeControls');
     $('shapeLead').textContent = shape.lead;
     box.innerHTML = '';
-    intCtl = {};
+    intCtl = {}; rangeCtl = {};
     shape.controls.forEach(function(c){
       var id = 'c_' + current + '_' + c.key;
       var wrap = document.createElement('div');
@@ -826,6 +920,7 @@
         r.min = c.min; r.max = c.max; r.step = c.step; r.value = p[c.key];
         o.textContent = c.fmt(p[c.key]);
         r.addEventListener('input', function(){ p[c.key] = +r.value; o.textContent = c.fmt(p[c.key]); update(true); });
+        rangeCtl[c.key] = function(){ r.value = p[c.key]; o.textContent = c.fmt(p[c.key]); };
         box.appendChild(wrap);
       } else if (c.type === 'check'){
         wrap.innerHTML = '<label class="check"><input type="checkbox" id="' + id + '"> <span></span></label>';
@@ -926,6 +1021,7 @@
   function update(rebuild){
     render(rebuild);
     if (rebuild) $('explain').innerHTML = SHAPES[current].explain(params[current]);
+    startAnim();
   }
 
   function syncViewControls(){
@@ -992,18 +1088,24 @@
     e.preventDefault();
   });
 
-  // 천천히 돌리기
+  // 움직임: 천천히 돌리기(3D) + 도형 자체의 움직임(예: 테서랙트의 4차원 회전)
   var spinRaf = 0, spinLast = 0;
+  function shapeAnimating(){ var s = SHAPES[current]; return !!(s.tick && s.animating(params[current])); }
+  function animActive(){ return view.spin || shapeAnimating(); }
   function spinStep(ts){
-    if (!view.spin){ spinRaf = 0; return; }
-    if (spinLast) rotateBy(Math.min(ts - spinLast, 100) * 0.02, 0);   // 초당 약 20°
+    if (!animActive()){ spinRaf = 0; spinLast = 0; return; }
+    var dt = spinLast ? Math.min(ts - spinLast, 100) : 0;
     spinLast = ts;
+    if (dt){
+      var rebuild = false;
+      if (shapeAnimating()){ SHAPES[current].tick(params[current], dt); syncRanges(); rebuild = true; }
+      if (view.spin){ view.yaw = wrapYaw(view.yaw + dt * 0.02); syncViewControls(); }   // 초당 약 20°
+      render(rebuild);
+    }
     spinRaf = requestAnimationFrame(spinStep);
   }
-  $('spin').addEventListener('change', function(){
-    view.spin = this.checked; spinLast = 0;
-    if (view.spin && !spinRaf) spinRaf = requestAnimationFrame(spinStep);
-  });
+  function startAnim(){ if (!spinRaf && animActive()) spinRaf = requestAnimationFrame(spinStep); }
+  $('spin').addEventListener('change', function(){ view.spin = this.checked; startAnim(); });
 
   /* ---------- 저장 ---------- */
   function showSave(t, kind){ var m = $('saveMsg'); m.textContent = t; m.className = 'msg ' + (kind || ''); }
