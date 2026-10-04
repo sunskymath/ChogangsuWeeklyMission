@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!--
+  4주차 번외: 수학 입체사진(스테레오 페어).
+  - 이 파일 하나로 동작합니다(외부 요청은 Google Fonts뿐이며, 막혀도 기본 글꼴로 표시됩니다).
+  - 외부 AI API나 3D 라이브러리를 쓰지 않습니다. 3D 회전·원근 투영을 직접 계산해 SVG로 그립니다.
+  - 도형은 SHAPES에 등록합니다. 각 도형은 설정 값(controls)과 3D 선분을 만드는 build()만 가지며,
+    입체 장치(두 눈 투영, 평행법/교차법, 회전, 저장)는 모든 도형이 함께 씁니다.
+-->
+<meta name="description" content="직선만으로 만든 일엽쌍곡면을 평행법·교차법 입체사진으로 보는 실험. 두 그림을 멍하니 바라보면 입체로 떠올라요.">
+<meta name="theme-color" content="#3A55C7">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B0D1F'/%3E%3Cpath d='M12 10 L28 54 M28 10 L12 54 M36 10 L52 54 M52 10 L36 54' stroke='%23FFB347' stroke-width='3'/%3E%3C/svg%3E">
+<title>수학 입체사진 — 평행법·교차법</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1D1C33;
+    --ink-soft:#514E72;
+    --paper:#F4F4FB;
+    --surface:#FFFFFF;
+    --line:#E4E2F1;
+    --blue:#33499E;
+    --blue-fill:#3A55C7;
+    --blue-soft:#E9ECFB;
+    --violet:#5B3E9E;
+    --violet-fill:#6C48B8;
+    --violet-soft:#EFE8FA;
+    --amber:#8A4A05;
+    --amber-soft:#FBF0E1;
+    --red:#B3261E;
+    --red-soft:#FCEBEA;
+    --green:#1E6B3A;
+    --green-soft:#E6F4EA;
+    --stage:#0B0D1F;
+    --radius:18px;
+    --font-display:'Gowun Batang', 'Nanum Myeongjo', serif;
+    --font-body:'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --font-math:'Cambria Math', 'STIX Two Math', 'Times New Roman', serif;
+  }
+  *{ box-sizing:border-box; }
+  [hidden]{ display:none !important; }
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--font-body); font-size:16px; line-height:1.6;
+    -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
+  }
+  .app{ max-width:1000px; margin:0 auto; padding:12px 16px 40px; }
+  .sr-only{
+    position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+  button, input, select{ font-family:inherit; font-size:inherit; color:inherit; }
+  button{ touch-action:manipulation; }
+  :focus-visible{ outline:3px solid var(--violet-fill); outline-offset:2px; }
+
+  /* ---------- top ---------- */
+  .top{
+    background:linear-gradient(120deg, var(--blue-fill) 0%, var(--violet-fill) 100%);
+    color:#fff; border-radius:22px; padding:22px 22px 20px; margin-bottom:16px;
+  }
+  .top .eyebrow{ margin:0; font-size:13px; letter-spacing:0.04em; opacity:0.9; }
+  .top h1{
+    font-family:var(--font-display); font-weight:700;
+    font-size:26px; line-height:1.3; margin:6px 0 8px; text-wrap:balance;
+  }
+  .top .sub{ margin:0; font-size:14.5px; color:rgba(255,255,255,0.92); }
+
+  /* ---------- cards ---------- */
+  .card{
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); padding:20px 18px 18px; margin-bottom:14px;
+  }
+  .card h2{ font-size:18px; font-weight:600; margin:0 0 4px; }
+  .card h3{ font-size:16px; font-weight:600; margin:16px 0 6px; }
+  .card .lead{ margin:0 0 14px; color:var(--ink-soft); font-size:14.5px; }
+  .card p{ margin:0 0 10px; }
+  .m{ font-family:var(--font-math); white-space:nowrap; }
+  .eq{
+    font-family:var(--font-math); font-size:22px; text-align:center;
+    padding:12px 8px; margin:0 0 12px; background:var(--paper); border-radius:12px;
+    overflow-x:auto; white-space:nowrap;
+  }
+
+  /* ---------- tabs ---------- */
+  .tabs{ display:flex; gap:6px; flex-wrap:wrap; margin:0 0 14px; }
+  .tab{
+    min-height:44px; padding:8px 18px; border-radius:100px;
+    border:2px solid var(--line); background:var(--surface);
+    font-weight:600; cursor:pointer; color:var(--ink-soft);
+  }
+  .tab[aria-selected="true"]{ background:var(--blue); border-color:var(--blue); color:#fff; }
+
+  /* ---------- stage ---------- */
+  .stage-card{ background:var(--stage); border-color:var(--stage); padding:16px 12px 14px; }
+  .modebar{ display:flex; justify-content:center; gap:6px; margin:0 0 12px; flex-wrap:wrap; }
+  .modebtn{
+    min-height:44px; padding:8px 16px; border-radius:12px; cursor:pointer;
+    border:2px solid #3A3F70; background:transparent; color:#C9CCF2; font-weight:600;
+  }
+  .modebtn[aria-pressed="true"]{ background:#FFFFFF; border-color:#FFFFFF; color:var(--stage); }
+  .modebtn:focus-visible{ outline-color:#FFD54A; }
+  .pair{
+    display:flex; justify-content:center; gap:var(--gap, 16px);
+    touch-action:none; user-select:none; -webkit-user-select:none; cursor:grab;
+    border-radius:8px;
+  }
+  .pair:active{ cursor:grabbing; }
+  .pair:focus-visible{ outline:3px solid #FFD54A; outline-offset:4px; }
+  .eye{ margin:0; flex:0 0 auto; text-align:center; }
+  .eye svg{ display:block; width:var(--w, 230px); height:var(--w, 230px); }
+  .eye figcaption{ color:#9EA3D9; font-size:13px; margin-top:4px; }
+  .stage-hint{ color:#B6BAE6; font-size:13.5px; text-align:center; margin:10px 4px 0; }
+  .stage-hint b{ color:#FFFFFF; }
+
+  /* ---------- controls ---------- */
+  .grid2{ display:grid; grid-template-columns:1fr; gap:14px; }
+  @media (min-width:820px){ .grid2{ grid-template-columns:1fr 1fr; align-items:start; } }
+  .grid2 .card{ margin-bottom:0; }
+  .field{ margin:0 0 14px; }
+  .field:last-child{ margin-bottom:0; }
+  .field-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:2px; }
+  .field-head label{ font-weight:600; }
+  .num{
+    width:5.5ch; padding:6px 8px; border:2px solid var(--line); border-radius:10px;
+    font-family:var(--font-math); font-size:20px; font-weight:700;
+    color:var(--blue); text-align:center; background:var(--surface);
+  }
+  .num:focus{ border-color:var(--violet-fill); outline:none; }
+  .num[aria-invalid="true"]{ border-color:var(--red); color:var(--red); background:var(--red-soft); }
+  output.val{ font-family:var(--font-math); font-size:18px; font-weight:700; color:var(--blue); }
+  input[type=range]{ width:100%; height:36px; margin:0; accent-color:var(--blue-fill); cursor:pointer; }
+  .ticks{ display:flex; justify-content:space-between; font-size:12px; color:var(--ink-soft); padding:0 6px; font-family:var(--font-math); }
+  .hint{ font-size:13px; color:var(--ink-soft); margin:4px 0 0; }
+  .msg{ font-size:14px; margin:6px 0 0; padding:6px 10px; border-radius:8px; }
+  .msg.err{ color:var(--red); background:var(--red-soft); }
+  .msg.note{ color:var(--amber); background:var(--amber-soft); }
+  .msg.ok{ color:var(--green); background:var(--green-soft); }
+  .msg:empty{ display:none; }
+  .check{ display:flex; align-items:center; gap:8px; min-height:40px; cursor:pointer; }
+  .check input{ width:20px; height:20px; accent-color:var(--blue-fill); margin:0; }
+  .seg{ display:flex; flex-wrap:wrap; gap:6px; border:0; padding:0; margin:0 0 12px; }
+  .seg legend{ font-weight:600; margin-bottom:4px; padding:0; }
+  .seg label{
+    display:inline-flex; align-items:center; gap:6px; padding:6px 12px; min-height:40px;
+    border:2px solid var(--line); border-radius:100px; cursor:pointer; font-size:14.5px;
+  }
+  .seg label:has(input:checked){ border-color:var(--blue-fill); background:var(--blue-soft); color:var(--blue); font-weight:600; }
+  .seg input{ accent-color:var(--blue-fill); margin:0; }
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    min-height:48px; padding:10px 18px; border-radius:14px;
+    border:2px solid transparent; font-size:16px; font-weight:600; cursor:pointer;
+  }
+  .btn-primary{ background:var(--blue); color:#fff; }
+  .btn-ghost{ background:var(--surface); color:var(--blue); border-color:var(--line); }
+  .btn-small{ min-height:40px; padding:6px 14px; font-size:14px; border-radius:12px; }
+  .btn-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .btn-row .btn{ flex:1 1 180px; }
+
+  /* guide */
+  details.guide{ border:1px solid var(--line); border-radius:12px; padding:10px 14px; margin:0 0 10px; }
+  details.guide summary{ font-weight:600; cursor:pointer; min-height:32px; }
+  details.guide ol{ margin:8px 0 4px; padding-left:22px; }
+  details.guide li{ margin-bottom:4px; }
+  .fact{ background:var(--blue-soft); border-radius:12px; padding:12px 14px; margin:0 0 10px; }
+  .fact b{ color:var(--blue); }
+  .explain ul{ padding-left:22px; margin:0 0 10px; }
+  .explain li{ margin-bottom:6px; }
+
+  footer{ font-size:13px; color:var(--ink-soft); margin-top:18px; text-align:center; }
+  footer a{ color:var(--blue); }
+
+  @media (max-width:420px){
+    .top h1{ font-size:22px; }
+    .card{ padding:16px 14px 14px; }
+    .stage-card{ padding:14px 6px 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <p class="eyebrow">4주차 번외 · 수학 입체사진</p>
+    <h1>직선으로 만든 곡면, 입체로 보기</h1>
+    <p class="sub">같은 도형을 왼눈 위치와 오른눈 위치에서 본 그림 두 장이에요. 멍하니 바라보거나(평행법) 눈을 살짝 모으면(교차법) 가운데에 입체 도형이 떠올라요.</p>
+  </header>
+
+  <main>
+    <div class="tabs" id="tabs" role="tablist" aria-label="도형 고르기"></div>
+
+    <!-- ===== 입체사진 ===== -->
+    <section class="card stage-card" aria-label="입체사진">
+      <div class="modebar" role="group" aria-label="보는 방법">
+        <button type="button" class="modebtn" data-mode="parallel" aria-pressed="true">평행법 (멍하니 보기)</button>
+        <button type="button" class="modebtn" data-mode="cross" aria-pressed="false">교차법 (눈 모으기)</button>
+      </div>
+      <div class="pair" id="pair" tabindex="0" role="img" aria-roledescription="입체사진"
+           aria-describedby="stageHint">
+        <figure class="eye"><svg id="svgL" viewBox="-1.9 -1.9 3.8 3.8" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg><figcaption id="capL">왼눈용</figcaption></figure>
+        <figure class="eye"><svg id="svgR" viewBox="-1.9 -1.9 3.8 3.8" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg><figcaption id="capR">오른눈용</figcaption></figure>
+      </div>
+      <p class="stage-hint" id="stageHint"></p>
+    </section>
+
+    <div class="grid2">
+      <!-- ===== 도형 설정 ===== -->
+      <section class="card" aria-labelledby="shapeH">
+        <h2 id="shapeH">도형 설정</h2>
+        <p class="lead" id="shapeLead"></p>
+        <div id="shapeControls"></div>
+      </section>
+
+      <!-- ===== 입체 설정 ===== -->
+      <section class="card" aria-labelledby="viewH">
+        <h2 id="viewH">입체 설정</h2>
+        <p class="lead">그림 위를 끌거나, 그림을 누른 뒤 방향키로 돌릴 수 있어요.</p>
+
+        <div class="field">
+          <div class="field-head"><label for="size">그림 크기</label><output class="val" id="sizeOut"></output></div>
+          <input id="size" type="range" min="120" max="420" step="10" value="230">
+          <p class="hint">평행법은 두 그림의 중심 사이가 두 눈 사이(약 6cm)보다 가까워야 쉬워요. 잘 안 되면 작게 줄여 보세요.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><label for="depth">입체감</label><output class="val" id="depthOut"></output></div>
+          <input id="depth" type="range" min="0" max="100" step="5" value="50">
+          <p class="hint">0이면 두 그림이 똑같아져서 평면으로 보여요. 너무 크면 합치기 어려워요.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><label for="yaw">좌우 회전</label><output class="val" id="yawOut"></output></div>
+          <input id="yaw" type="range" min="-180" max="180" step="1" value="0">
+        </div>
+        <div class="field">
+          <div class="field-head"><label for="pitch">위아래 기울기</label><output class="val" id="pitchOut"></output></div>
+          <input id="pitch" type="range" min="-80" max="80" step="1" value="20">
+        </div>
+        <label class="check"><input type="checkbox" id="spin"> 천천히 돌리기</label>
+        <label class="check"><input type="checkbox" id="dots" checked> 맞춤 점 표시 (두 점이 하나로 겹치면 성공)</label>
+        <label class="check"><input type="checkbox" id="shade" checked> 가까운 선을 더 진하고 굵게</label>
+        <div class="btn-row" style="margin-top:8px">
+          <button type="button" class="btn btn-ghost btn-small" id="resetView">보기 처음으로</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===== 보는 법 ===== -->
+    <section class="card" aria-labelledby="howH" style="margin-top:14px">
+      <h2 id="howH">보는 법</h2>
+      <details class="guide" id="guideParallel" open>
+        <summary>평행법 — 멍하니 먼 곳 보듯이</summary>
+        <ol>
+          <li>화면에 얼굴을 30~40cm 정도 가까이 대고, 그림 크기를 작게 해요.</li>
+          <li>화면 너머 먼 곳을 보듯 초점을 풀어요. 두 그림이 흐릿하게 네 개로 갈라져 보여요.</li>
+          <li>가운데 두 장이 겹치도록 천천히 기다려요. 위쪽 맞춤 점이 <b>세 개</b>로 보이면 가운데 것이 합쳐진 거예요.</li>
+          <li>합쳐진 가운데 그림에 초점이 잡히면 입체로 보여요. 왼쪽 그림이 왼눈용이에요.</li>
+        </ol>
+      </details>
+      <details class="guide" id="guideCross">
+        <summary>교차법 — 눈을 살짝 모아서</summary>
+        <ol>
+          <li>두 그림 사이, 화면 앞쪽에 손가락을 세우고 손가락 끝을 봐요.</li>
+          <li>손가락을 앞뒤로 움직이면 뒤의 그림이 네 개 → 세 개로 바뀌는 지점이 있어요.</li>
+          <li>세 개로 보이면 손가락을 치우고 가운데 그림을 계속 봐요. 맞춤 점도 세 개로 보여야 해요.</li>
+          <li>교차법은 큰 그림에서도 잘 돼요. 왼쪽 그림이 오른눈용이에요.</li>
+        </ol>
+      </details>
+      <p class="hint">눈이 피곤하거나 어지러우면 바로 쉬어 주세요. 사람마다 잘 되는 방법이 달라서, 한쪽이 안 되면 다른 방법을 써 보세요. 평행법 그림을 교차법으로 보면 앞뒤가 뒤집혀 보이니 버튼으로 방식을 맞춰 주세요.</p>
+    </section>
+
+    <!-- ===== 수학 설명 ===== -->
+    <section class="card explain" aria-labelledby="mathH">
+      <h2 id="mathH">수학 설명</h2>
+      <div id="explain"></div>
+      <h3>입체사진은 어떻게 입체로 보일까?</h3>
+      <p>두 눈은 약 6cm 떨어져 있어서 같은 물체를 조금 다른 방향에서 봐요. 가까운 것일수록 두 눈에 비친 위치 차이(<b>시차</b>)가 커지고, 뇌는 이 차이로 거리를 느껴요. 이 페이지는 도형을 3D 좌표로 만든 뒤 왼눈·오른눈 위치에서 각각 원근 투영해 두 장을 그려요. 그래서 도형의 앞쪽 선은 두 그림에서 위치가 더 많이 다르고, 가운데 높이의 선은 거의 같은 위치에 있어요.</p>
+    </section>
+
+    <!-- ===== 저장 ===== -->
+    <section class="card" aria-labelledby="saveH">
+      <h2 id="saveH">저장하기</h2>
+      <p class="lead">지금 보고 있는 입체사진(두 장 + 맞춤 점)을 SVG 그림으로 저장해요. 지금 고른 방식(평행법/교차법) 그대로 저장돼요.</p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" id="saveSvg">입체사진 SVG 저장</button>
+      </div>
+      <p class="msg" id="saveMsg" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <footer>
+    <p>외부 AI API나 3D 라이브러리 없이 브라우저에서 직접 계산해 그립니다. · <a href="../week4/">4주차: 곱셈 원 아트</a></p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var $ = function(id){ return document.getElementById(id); };
+  var NS = 'http://www.w3.org/2000/svg';
+
+  function gcd(a, b){ a = Math.abs(a); b = Math.abs(b); while (b){ var t = a % b; a = b; b = t; } return a; }
+  function r3(x){ return (Math.round(x * 1000) / 1000).toFixed(3).replace(/\.?0+$/, ''); }
+  function deg(x){ var r = Math.round(x * 10) / 10; return (r % 1 === 0 ? r.toFixed(0) : r.toFixed(1)) + '°'; }
+
+  /* =====================================================================
+     도형 등록부
+     - controls: 설정 값 목록 (int: 정수 슬라이더+입력칸, check: 체크박스, choice: 고르기)
+     - build(p): 3D 선분 { a:[x,y,z], b:[x,y,z], color } 과 보조선 { pts:[[x,y,z]...], color, dash } 을 돌려줌
+       (y가 위쪽, z가 보는 사람 쪽. 크기는 대략 반지름 1.5 안쪽)
+     - explain(p): 수학 설명 HTML,  fileTag(p): 저장 파일 이름에 붙일 글자
+     ===================================================================== */
+  var SHAPES = {
+    hyperboloid: {
+      label: '일엽쌍곡면',
+      lead: '위아래 두 원에 N개씩 점을 찍고, 아래 i번 점을 위 (i + s) mod N번 점과 직선으로 이어요.',
+      controls: [
+        { key:'N', type:'int', label:'원 위의 점 개수 N', min:function(){ return 12; }, max:function(){ return 120; }, def:60 },
+        { key:'s', type:'int', label:'비트는 칸 수 s', min:function(){ return 0; }, max:function(p){ return Math.floor(p.N / 2); }, def:20,
+          hint:'s가 0이면 원기둥, N의 절반이면 원뿔 두 개가 돼요.' },
+        { key:'H', type:'range', label:'두 원 사이 높이', min:1, max:2.6, step:0.1, def:2, fmt:function(v){ return v.toFixed(1); } },
+        { key:'both', type:'check', label:'반대로 비튼 직선도 함께 (i → (i − s) mod N)', def:true },
+        { key:'waist', type:'check', label:'허리 원 표시', def:true },
+        { key:'color', type:'choice', label:'선 색', def:'family',
+          options:[ ['family', '방향별 두 색'], ['rainbow', '무지개 (i에 따라)'] ] }
+      ],
+      build: function(p){
+        var N = p.N, s = p.s, h = p.H / 2;
+        var k = 1.6 / Math.hypot(1, h);              // 높이가 달라도 화면에 맞게 줄이는 비율
+        function P(i, y){ var a = 2 * Math.PI * i / N; return [k * Math.cos(a), k * y, k * Math.sin(a)]; }
+        function col(i, fam){
+          if (p.color === 'rainbow') return 'hsl(' + Math.round(360 * i / N) + ',90%,66%)';
+          return fam > 0 ? '#FFB347' : '#5CD6FF';
+        }
+        var segs = [], guides = [];
+        for (var i = 0; i < N; i++){
+          segs.push({ a:P(i, -h), b:P((i + s) % N, h), color:col(i, 1) });
+          if (p.both && s !== 0 && 2 * s !== N) segs.push({ a:P(i, -h), b:P(((i - s) % N + N) % N, h), color:col(i, -1) });
+        }
+        guides.push({ pts:circle(k, -k * h, 72), color:'#6F76B8' });
+        guides.push({ pts:circle(k, k * h, 72), color:'#6F76B8' });
+        var a = Math.abs(Math.cos(Math.PI * s / N));
+        if (p.waist && a > 0.001) guides.push({ pts:circle(k * a, 0, 72), color:'#FFFFFF', dash:true });
+        return { segs:segs, guides:guides };
+      },
+      explain: function(p){
+        var N = p.N, s = p.s, h = p.H / 2;
+        var phiDeg = 360 * s / N, phi = 2 * Math.PI * s / N;
+        var a = Math.abs(Math.cos(phi / 2));
+        var html = '';
+        html += '<div class="eq">아래 i번 점 &nbsp;→&nbsp; 위 (i + ' + s + ') mod ' + N + '번 점</div>';
+        html += '<h3>1. 규칙과 나머지 연산</h3>';
+        html += '<p>아래 원과 위 원에 0번부터 ' + (N - 1) + '번까지 같은 위치에 점을 찍어요. 아래 <span class="m">i</span>번 점은 위 원에서 ' + s + '칸 돌아간 점과 이어요. ' +
+                '<span class="m">i + ' + s + '</span>가 ' + N + ' 이상이면 한 바퀴를 넘은 것이므로 ' + N + '을 빼요. 이것이 <span class="m">(i + ' + s + ') mod ' + N + '</span>이에요. ' +
+                '예: <span class="m">i = ' + (N - 1) + '</span> → <span class="m">' + (N - 1 + s) + ' mod ' + N + ' = ' + ((N - 1 + s) % N) + '</span>번. ' +
+                '4주차 곱셈 원(<span class="m">k × i</span>)과 달리 여기서는 <b>더하기</b>를 나머지로 계산해서 모든 직선이 같은 각만큼 비틀려요.</p>';
+
+        html += '<h3>2. 직선만으로 곡면이 되는 이유</h3>';
+        if (s === 0){
+          html += '<div class="fact"><b>s = 0: 원기둥.</b> 모든 직선이 바로 위의 점과 이어져서 세로선이 둘러선 원기둥이 돼요. s를 늘려 보세요.</div>';
+        } else if (2 * s === N){
+          html += '<div class="fact"><b>s = N ÷ 2 = ' + s + ': 꼭짓점을 맞댄 원뿔 두 개.</b> 비틀림 각이 180°라서 모든 직선이 정가운데(원의 중심축 위 한 점)를 지나요. 곡면의 허리가 0으로 줄어든 극단적인 경우예요. ' +
+                  '식으로는 <span class="m">x² + z² = (y ÷ ' + r3(h) + ')²</span> (아래 원 반지름 1, 두 원 사이 높이 ' + p.H.toFixed(1) + ')이에요.</div>';
+        } else {
+          var c = h / Math.tan(phi / 2);
+          html += '<p>아래 원 반지름을 1, 두 원 사이 높이를 <span class="m">' + p.H.toFixed(1) + '</span>(가운데가 <span class="m">y = 0</span>)로 두면, 비틀림 각은 <span class="m">φ = 360° × ' + s + ' ÷ ' + N + ' = ' + deg(phiDeg) + '</span>예요. ' +
+                  '직선 하나를 따라가며 중심축까지의 거리를 계산하면 모든 직선이 아래 곡면 위에 놓여요.</p>';
+          html += '<div class="eq">(x² + z²) ÷ a² − y² ÷ c² = 1</div>';
+          html += '<div class="fact"><b>허리 반지름 a = |cos(φ ÷ 2)| ≈ ' + r3(a) + '</b>, <b>c = (높이 ÷ 2) × |cot(φ ÷ 2)| ≈ ' + r3(Math.abs(c)) + '</b>. ' +
+                  '직선의 한가운데(<span class="m">y = 0</span>)가 축에서 가장 가까워서 잘록한 허리가 생겨요. 허리 원(흰 점선)이 바로 <span class="m">a</span>예요. ' +
+                  'x²과 z²은 더하고 y²은 빼는 꼴이라 <b>일엽쌍곡면</b>(한 장으로 이어진 쌍곡면)이라고 해요. 세로로 자른 단면은 쌍곡선이에요.</div>';
+          html += '<div class="fact"><b>반대로 비튼 직선도 같은 곡면 위에 있어요.</b> <span class="m">i → (i − ' + s + ') mod ' + N + '</span>로 이은 직선들은 위의 곡면을 거울에 비춘 것과 같은데, 이 곡면은 거울 대칭이라 같은 곡면이 돼요. ' +
+                  '그래서 일엽쌍곡면은 서로 다른 방향의 직선 두 묶음으로 짤 수 있는 <b>이중선직면</b>이에요. 두 색이 엇갈려 그물처럼 보이는 이유예요.</div>';
+        }
+        var g = gcd(s, N);
+        html += '<h3>3. 이것저것 관찰해 보기</h3><ul>';
+        html += '<li>s를 0에서 N의 절반까지 늘리면 허리가 1에서 0까지 점점 가늘어져요. 허리 반지름은 <span class="m">|cos(180° × s ÷ N)|</span>예요.</li>';
+        html += '<li>위 원의 도착점은 모두 서로 달라요. 더하기 규칙 <span class="m">i → i + s</span>는 점의 위치를 한꺼번에 돌릴 뿐이라 어떤 점도 겹치지 않아요(4주차 곱셈 규칙과 다른 점).</li>';
+        html += '<li>지금은 <span class="m">gcd(' + s + ', ' + N + ') = ' + g + '</span>이에요. 아래 점에서 출발해 “위로 올라가 같은 번호의 아래 점으로 내려오기”를 반복하면 ' + (N / g) + '번 만에 처음 점으로 돌아와요.</li>';
+        html += '<li>실제 건축에서도 쓰여요. 곧은 철재만으로 곡면을 세울 수 있어서 슈호프 탑, 발전소 냉각탑, 고베 포트 타워 같은 구조물이 이 모양이에요.</li>';
+        html += '</ul>';
+        return html;
+      },
+      fileTag: function(p){ return '일엽쌍곡면_N' + p.N + '_s' + p.s; },
+      describe: function(p){ return '일엽쌍곡면: 점 ' + p.N + '개, ' + p.s + '칸 비틀어 이은 직선들'; }
+    }
+  };
+
+  function circle(r, y, n){
+    var pts = [];
+    for (var i = 0; i <= n; i++){ var a = 2 * Math.PI * i / n; pts.push([r * Math.cos(a), y, r * Math.sin(a)]); }
+    return pts;
+  }
+
+  /* =====================================================================
+     입체 장치 (모든 도형이 함께 씀)
+     ===================================================================== */
+  var DEF_VIEW = { size:230, depth:50, yaw:0, pitch:20 };
+  var view = { mode:'parallel', size:230, depth:50, yaw:0, pitch:20, spin:false, dots:true, shade:true };
+  var D = 7;               // 눈에서 화면(도형 중심)까지 거리
+  var EYE_MAX = 0.6;       // 입체감 100%일 때 두 눈 사이 거리
+  var BOX = 1.9;           // viewBox 반폭
+
+  var current = 'hyperboloid';
+  var params = {};         // 도형별 설정 값
+  Object.keys(SHAPES).forEach(function(key){
+    params[key] = {};
+    SHAPES[key].controls.forEach(function(c){ params[key][c.key] = c.def; });
+  });
+
+  function rotator(){
+    var y = view.yaw * Math.PI / 180, p = view.pitch * Math.PI / 180;
+    var cy = Math.cos(y), sy = Math.sin(y), cp = Math.cos(p), sp = Math.sin(p);
+    return function(v){
+      var x1 = v[0] * cy + v[2] * sy, z1 = -v[0] * sy + v[2] * cy;
+      return [x1, v[1] * cp - z1 * sp, v[1] * sp + z1 * cp];
+    };
+  }
+  // 눈 위치 (ex, 0, D) 에서 본 점을, z = 0 평면(화면)에 원근 투영
+  function project(v, ex){
+    var t = D / (D - v[2]);
+    return [ex + (v[0] - ex) * t, -v[1] * t];
+  }
+  function f3(x){ return Math.round(x * 1000) / 1000; }
+
+  // 한쪽 눈의 SVG 내용 (문자열)
+  function eyeContent(model, ex){
+    var rot = rotator(), out = [];
+    out.push('<rect x="' + (-BOX) + '" y="' + (-BOX) + '" width="' + (2 * BOX) + '" height="' + (2 * BOX) + '" fill="#0B0D1F"/>');
+    model.guides.forEach(function(g){
+      var d = g.pts.map(function(v, i){ var q = project(rot(v), ex); return (i ? 'L' : 'M') + f3(q[0]) + ' ' + f3(q[1]); }).join('');
+      out.push('<path d="' + d + '" fill="none" stroke="' + g.color + '" stroke-width="' + (g.dash ? 1.4 : 1.2) + '"' +
+               (g.dash ? ' stroke-dasharray="4 4"' : '') + ' vector-effect="non-scaling-stroke" stroke-opacity="0.9"/>');
+    });
+    var list = model.segs.map(function(sg){
+      var a = rot(sg.a), b = rot(sg.b);
+      return { a:a, b:b, z:(a[2] + b[2]) / 2, color:sg.color };
+    });
+    list.sort(function(u, v){ return u.z - v.z; });   // 먼 선부터 그려서 가까운 선이 위에 오게
+    list.forEach(function(sg){
+      var pa = project(sg.a, ex), pb = project(sg.b, ex);
+      var t = Math.max(0, Math.min(1, (sg.z + 1.5) / 3));
+      var op = view.shade ? 0.35 + 0.65 * t : 0.9;
+      var w = view.shade ? 0.8 + 1.4 * t : 1.3;
+      out.push('<line x1="' + f3(pa[0]) + '" y1="' + f3(pa[1]) + '" x2="' + f3(pb[0]) + '" y2="' + f3(pb[1]) + '" stroke="' + sg.color +
+               '" stroke-width="' + w.toFixed(2) + '" stroke-opacity="' + op.toFixed(2) + '" stroke-linecap="round" vector-effect="non-scaling-stroke"/>');
+    });
+    if (view.dots) out.push('<circle cx="0" cy="' + (-BOX + 0.13) + '" r="0.06" fill="#FFFFFF"/>');
+    return out.join('');
+  }
+
+  function eyeSep(){ return EYE_MAX * view.depth / 100; }
+
+  var lastModel = null;
+  function render(rebuild){
+    var shape = SHAPES[current], p = params[current];
+    if (rebuild || !lastModel) lastModel = shape.build(p);
+    var e = eyeSep();
+    var leftEye = eyeContent(lastModel, -e / 2), rightEye = eyeContent(lastModel, e / 2);
+    var cross = view.mode === 'cross';
+    $('svgL').innerHTML = cross ? rightEye : leftEye;
+    $('svgR').innerHTML = cross ? leftEye : rightEye;
+    $('capL').textContent = cross ? '오른눈용' : '왼눈용';
+    $('capR').textContent = cross ? '왼눈용' : '오른눈용';
+    $('pair').setAttribute('aria-label', (cross ? '교차법' : '평행법') + ' 입체사진. ' + shape.describe(p) + '. 방향키로 돌릴 수 있어요.');
+  }
+
+  function renderStageHint(){
+    $('stageHint').innerHTML = view.mode === 'parallel'
+      ? '<b>평행법</b>: 먼 곳을 보듯 초점을 풀고, 위쪽 흰 점이 세 개로 보일 때까지 기다려요.'
+      : '<b>교차법</b>: 두 그림 사이 앞쪽에 손가락을 두고 보다가, 흰 점이 세 개가 되면 손가락을 치워요.';
+  }
+
+  function applySize(){
+    var pair = $('pair');
+    var avail = pair.parentElement.clientWidth - 24;
+    var gap = 16;
+    var w = Math.max(100, Math.min(view.size, Math.floor((avail - gap) / 2)));
+    pair.style.setProperty('--w', w + 'px');
+    pair.style.setProperty('--gap', gap + 'px');
+    $('sizeOut').textContent = w === view.size ? w + 'px' : w + 'px (화면 폭에 맞춤)';
+  }
+
+  /* ---------- 탭과 도형 설정 ---------- */
+  function buildTabs(){
+    var box = $('tabs');
+    box.innerHTML = '';
+    Object.keys(SHAPES).forEach(function(key){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'tab'; b.setAttribute('role', 'tab');
+      b.dataset.shape = key; b.textContent = SHAPES[key].label;
+      b.setAttribute('aria-selected', String(key === current));
+      b.tabIndex = key === current ? 0 : -1;
+      box.appendChild(b);
+    });
+  }
+  $('tabs').addEventListener('click', function(e){
+    var b = e.target.closest('[data-shape]');
+    if (b && b.dataset.shape !== current) selectShape(b.dataset.shape);
+  });
+  $('tabs').addEventListener('keydown', function(e){
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    var keys = Object.keys(SHAPES), i = keys.indexOf(current);
+    i = (i + (e.key === 'ArrowRight' ? 1 : -1) + keys.length) % keys.length;
+    selectShape(keys[i]);
+    var t = $('tabs').querySelector('[data-shape="' + keys[i] + '"]');
+    if (t) t.focus();
+    e.preventDefault();
+  });
+
+  function selectShape(key){
+    current = key;
+    buildTabs();
+    buildControls();
+    update(true);
+  }
+
+  var intCtl = {};
+  function buildControls(){
+    var shape = SHAPES[current], p = params[current], box = $('shapeControls');
+    $('shapeLead').textContent = shape.lead;
+    box.innerHTML = '';
+    intCtl = {};
+    shape.controls.forEach(function(c){
+      var id = 'c_' + current + '_' + c.key;
+      var wrap = document.createElement('div');
+      wrap.className = 'field';
+      if (c.type === 'int'){
+        wrap.innerHTML =
+          '<div class="field-head"><label for="' + id + 'R"></label>' +
+          '<input id="' + id + 'N" class="num" type="number" inputmode="numeric" step="1" aria-describedby="' + id + 'M"></div>' +
+          '<input id="' + id + 'R" type="range" step="1">' +
+          '<div class="ticks" aria-hidden="true"><span class="lo"></span><span class="hi"></span></div>' +
+          (c.hint ? '<p class="hint"></p>' : '') +
+          '<p class="msg" id="' + id + 'M" aria-live="polite"></p>';
+        wrap.querySelector('label').textContent = c.label;
+        wrap.querySelector('.num').setAttribute('aria-label', c.label + ' 직접 입력');
+        if (c.hint) wrap.querySelector('.hint').textContent = c.hint;
+        box.appendChild(wrap);
+        intCtl[c.key] = bindInt(c, wrap, id);
+      } else if (c.type === 'range'){
+        wrap.innerHTML = '<div class="field-head"><label for="' + id + '"></label><output class="val"></output></div>' +
+          '<input id="' + id + '" type="range">';
+        wrap.querySelector('label').textContent = c.label;
+        var r = wrap.querySelector('input'), o = wrap.querySelector('output');
+        r.min = c.min; r.max = c.max; r.step = c.step; r.value = p[c.key];
+        o.textContent = c.fmt(p[c.key]);
+        r.addEventListener('input', function(){ p[c.key] = +r.value; o.textContent = c.fmt(p[c.key]); update(true); });
+        box.appendChild(wrap);
+      } else if (c.type === 'check'){
+        wrap.innerHTML = '<label class="check"><input type="checkbox" id="' + id + '"> <span></span></label>';
+        wrap.querySelector('span').textContent = c.label;
+        var cb = wrap.querySelector('input');
+        cb.checked = !!p[c.key];
+        cb.addEventListener('change', function(){ p[c.key] = cb.checked; update(true); });
+        wrap.style.marginBottom = '0';
+        box.appendChild(wrap);
+      } else if (c.type === 'choice'){
+        var fs = document.createElement('fieldset');
+        fs.className = 'seg';
+        var lg = document.createElement('legend'); lg.textContent = c.label; fs.appendChild(lg);
+        c.options.forEach(function(op){
+          var lab = document.createElement('label');
+          var inp = document.createElement('input');
+          inp.type = 'radio'; inp.name = id; inp.value = op[0]; inp.checked = p[c.key] === op[0];
+          inp.addEventListener('change', function(){ if (inp.checked){ p[c.key] = op[0]; update(true); } });
+          lab.appendChild(inp); lab.appendChild(document.createTextNode(' ' + op[1]));
+          fs.appendChild(lab);
+        });
+        wrap.style.marginTop = '10px';
+        wrap.appendChild(fs);
+        box.appendChild(wrap);
+      }
+    });
+    syncBounds();
+  }
+
+  // 정수 입력: 슬라이더 + 입력칸 + 범위 검사 (범위가 다른 값에 따라 바뀔 수 있음)
+  function bindInt(c, wrap, id){
+    var p = params[current];
+    var range = wrap.querySelector('#' + id + 'R'), num = wrap.querySelector('#' + id + 'N'), msg = wrap.querySelector('#' + id + 'M');
+    var lo = wrap.querySelector('.lo'), hi = wrap.querySelector('.hi');
+    function setMsg(t, kind){ msg.textContent = t; msg.className = 'msg' + (kind ? ' ' + kind : ''); }
+    function bounds(){
+      var mn = c.min(p), mx = c.max(p);
+      range.min = mn; range.max = mx; num.min = mn; num.max = mx;
+      lo.textContent = mn; hi.textContent = mx;
+      if (p[c.key] > mx){ p[c.key] = mx; setMsg('범위가 바뀌어 ' + c.label + '을(를) ' + mx + '(으)로 맞췄어요.', 'note'); }
+      if (p[c.key] < mn){ p[c.key] = mn; setMsg('범위가 바뀌어 ' + c.label + '을(를) ' + mn + '(으)로 맞췄어요.', 'note'); }
+      range.value = p[c.key]; num.value = p[c.key];
+    }
+    function check(){
+      if (num.validity && num.validity.badInput) return '숫자만 입력할 수 있어요.';
+      var s = num.value.trim();
+      if (s === '') return '값을 입력해 주세요.';
+      if (!/^-?\d+$/.test(s)) return '소수점 없는 정수만 쓸 수 있어요.';
+      var v = parseInt(s, 10), mn = c.min(p), mx = c.max(p);
+      if (v < mn || v > mx) return mn + ' 이상 ' + mx + ' 이하의 정수여야 해요.';
+      return null;
+    }
+    function set(v){
+      p[c.key] = v; range.value = v; num.value = v;
+      num.removeAttribute('aria-invalid');
+      syncBounds();
+      update(true);
+    }
+    range.addEventListener('input', function(){ setMsg(''); set(parseInt(range.value, 10)); });
+    num.addEventListener('input', function(){
+      var e = check();
+      if (e){ num.setAttribute('aria-invalid', 'true'); setMsg(e + ' 그림은 마지막 올바른 값(' + p[c.key] + ')으로 유지돼요.', 'err'); }
+      else { setMsg(''); set(parseInt(num.value, 10)); }
+    });
+    num.addEventListener('change', function(){
+      if (check()){
+        num.value = p[c.key]; num.removeAttribute('aria-invalid');
+        setMsg('올바르지 않은 값이라 ' + p[c.key] + '(으)로 되돌렸어요.', 'note');
+      }
+    });
+    return { bounds:bounds };
+  }
+  function syncBounds(){ Object.keys(intCtl).forEach(function(k){ intCtl[k].bounds(); }); }
+
+  /* ---------- 전체 갱신 ---------- */
+  function update(rebuild){
+    render(rebuild);
+    if (rebuild) $('explain').innerHTML = SHAPES[current].explain(params[current]);
+  }
+
+  function syncViewControls(){
+    $('size').value = view.size;
+    $('depth').value = view.depth; $('depthOut').textContent = view.depth + '%';
+    $('yaw').value = Math.round(view.yaw); $('yawOut').textContent = Math.round(view.yaw) + '°';
+    $('pitch').value = Math.round(view.pitch); $('pitchOut').textContent = Math.round(view.pitch) + '°';
+    applySize();
+  }
+
+  /* ---------- 입체 설정 조작 ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.modebtn'), function(b){
+    b.addEventListener('click', function(){
+      view.mode = b.dataset.mode;
+      Array.prototype.forEach.call(document.querySelectorAll('.modebtn'), function(o){ o.setAttribute('aria-pressed', String(o === b)); });
+      $('guideParallel').open = view.mode === 'parallel';
+      $('guideCross').open = view.mode === 'cross';
+      renderStageHint();
+      render(false);
+    });
+  });
+  $('size').addEventListener('input', function(){ view.size = +this.value; applySize(); });
+  $('depth').addEventListener('input', function(){ view.depth = +this.value; syncViewControls(); render(false); });
+  $('yaw').addEventListener('input', function(){ view.yaw = +this.value; syncViewControls(); render(false); });
+  $('pitch').addEventListener('input', function(){ view.pitch = +this.value; syncViewControls(); render(false); });
+  $('dots').addEventListener('change', function(){ view.dots = this.checked; render(false); });
+  $('shade').addEventListener('change', function(){ view.shade = this.checked; render(false); });
+  $('resetView').addEventListener('click', function(){
+    view.size = DEF_VIEW.size; view.depth = DEF_VIEW.depth; view.yaw = DEF_VIEW.yaw; view.pitch = DEF_VIEW.pitch;
+    syncViewControls(); render(false);
+  });
+  window.addEventListener('resize', applySize);
+
+  function wrapYaw(y){ return ((y + 180) % 360 + 360) % 360 - 180; }
+  function rotateBy(dy, dp){
+    view.yaw = wrapYaw(view.yaw + dy);
+    view.pitch = Math.max(-80, Math.min(80, view.pitch + dp));
+    syncViewControls(); render(false);
+  }
+
+  // 끌어서 돌리기
+  var drag = null;
+  $('pair').addEventListener('pointerdown', function(e){
+    drag = { x:e.clientX, y:e.clientY };
+    try { this.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  $('pair').addEventListener('pointermove', function(e){
+    if (!drag) return;
+    var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    drag = { x:e.clientX, y:e.clientY };
+    rotateBy(dx * 0.6, dy * 0.6);
+  });
+  ['pointerup', 'pointercancel'].forEach(function(t){ $('pair').addEventListener(t, function(){ drag = null; }); });
+
+  // 방향키로 돌리기
+  $('pair').addEventListener('keydown', function(e){
+    var step = e.shiftKey ? 15 : 5;
+    if (e.key === 'ArrowLeft') rotateBy(-step, 0);
+    else if (e.key === 'ArrowRight') rotateBy(step, 0);
+    else if (e.key === 'ArrowUp') rotateBy(0, -step);
+    else if (e.key === 'ArrowDown') rotateBy(0, step);
+    else return;
+    e.preventDefault();
+  });
+
+  // 천천히 돌리기
+  var spinRaf = 0, spinLast = 0;
+  function spinStep(ts){
+    if (!view.spin){ spinRaf = 0; return; }
+    if (spinLast) rotateBy(Math.min(ts - spinLast, 100) * 0.02, 0);   // 초당 약 20°
+    spinLast = ts;
+    spinRaf = requestAnimationFrame(spinStep);
+  }
+  $('spin').addEventListener('change', function(){
+    view.spin = this.checked; spinLast = 0;
+    if (view.spin && !spinRaf) spinRaf = requestAnimationFrame(spinStep);
+  });
+
+  /* ---------- 저장 ---------- */
+  function showSave(t, kind){ var m = $('saveMsg'); m.textContent = t; m.className = 'msg ' + (kind || ''); }
+  var DL_HELP = ' 휴대폰의 카카오톡·인스타그램 같은 앱 안 브라우저는 다운로드를 막는 경우가 많아요. 크롬·사파리·엣지로 열어 다시 시도해 보세요.';
+
+  function buildPairSVG(){
+    var W = 600, G = 40, M = 30, top = 70, bottom = 50;
+    var total = M * 2 + W * 2 + G, height = top + W + bottom;
+    var cross = view.mode === 'cross', shape = SHAPES[current], p = params[current];
+    var e = eyeSep();
+    var leftEye = eyeContent(lastModel, -e / 2), rightEye = eyeContent(lastModel, e / 2);
+    var root = document.createElementNS(NS, 'svg');
+    root.setAttribute('xmlns', NS);
+    root.setAttribute('width', total); root.setAttribute('height', height);
+    root.setAttribute('viewBox', '0 0 ' + total + ' ' + height);
+    var title = document.createElementNS(NS, 'title');
+    title.textContent = shape.label + ' 입체사진 (' + (cross ? '교차법' : '평행법') + ')';
+    root.appendChild(title);
+    var bg = document.createElementNS(NS, 'rect');
+    bg.setAttribute('width', total); bg.setAttribute('height', height); bg.setAttribute('fill', '#0B0D1F');
+    root.appendChild(bg);
+    var t1 = document.createElementNS(NS, 'text');
+    t1.setAttribute('x', total / 2); t1.setAttribute('y', 44); t1.setAttribute('text-anchor', 'middle');
+    t1.setAttribute('font-family', 'Malgun Gothic, Apple SD Gothic Neo, sans-serif'); t1.setAttribute('font-size', '26');
+    t1.setAttribute('fill', '#E6E8FF');
+    t1.textContent = shape.describe(p) + ' · ' + (cross ? '교차법(눈 모으기): 왼쪽 그림 = 오른눈용' : '평행법(멍하니 보기): 왼쪽 그림 = 왼눈용');
+    root.appendChild(t1);
+    [[M, cross ? rightEye : leftEye], [M + W + G, cross ? leftEye : rightEye]].forEach(function(pn){
+      var sv = document.createElementNS(NS, 'svg');
+      sv.setAttribute('x', pn[0]); sv.setAttribute('y', top);
+      sv.setAttribute('width', W); sv.setAttribute('height', W);
+      sv.setAttribute('viewBox', (-BOX) + ' ' + (-BOX) + ' ' + (2 * BOX) + ' ' + (2 * BOX));
+      sv.innerHTML = pn[1];
+      root.appendChild(sv);
+    });
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(root);
+  }
+
+  $('saveSvg').addEventListener('click', function(){
+    try {
+      var text = buildPairSVG();
+      if (typeof Blob === 'undefined' || !window.URL || !URL.createObjectURL) throw new Error('이 브라우저는 파일 만들기를 지원하지 않아요.');
+      var a = document.createElement('a');
+      if (!('download' in a)) throw new Error('이 브라우저는 바로 내려받기를 지원하지 않아요.');
+      var name = '입체사진_' + SHAPES[current].fileTag(params[current]) + '_' + (view.mode === 'cross' ? '교차법' : '평행법') + '.svg';
+      var url = URL.createObjectURL(new Blob([text], { type:'image/svg+xml;charset=utf-8' }));
+      a.href = url; a.download = name; a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+      showSave('‘' + name + '’ 저장을 요청했어요. 다운로드 폴더를 확인하세요. 파일이 보이지 않으면 브라우저가 막았을 수 있어요.' + DL_HELP, 'ok');
+    } catch (err) {
+      showSave('저장하지 못했어요: ' + (err && err.message ? err.message : '알 수 없는 오류') + DL_HELP, 'err');
+    }
+  });
+
+  /* ---------- 시작 ---------- */
+  buildTabs();
+  buildControls();
+  syncViewControls();
+  renderStageHint();
+  update(true);
+})();
+</script>
+</body>
+</html>
