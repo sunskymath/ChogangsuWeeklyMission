@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!--
+  배포 전 확인: 교사가 문항 표현과 해설·수업 제안 문구를 최종 검토하세요.
+  - 이 파일 하나로 동작합니다(외부 요청은 Google Fonts뿐이며, 막혀도 기본 글꼴로 표시됩니다).
+    외부 AI API를 쓰지 않고, 모든 숫자는 f(x)=a(x−h)²+k 에 직접 대입해 계산합니다.
+  - 실제 학생 이름·성적·연락처를 받지 않습니다. 별명은 저장하지 않습니다.
+    이 브라우저의 localStorage에는 조건·선택지 순서·도입 질문·익명 응답 수·저장한 수업 계획만 남습니다.
+  - 이 교사용 화면에는 정답과 해설이 들어 있습니다. 학생 기기에는 '학생용 HTML 받기'로 만든 파일을 주세요.
+    학생용 파일에는 정답·해설·교사 메모·응답 집계가 들어가지 않습니다.
+  - 점수를 매기지 않습니다. 문항별로 '해설의 답과 같음/다름'과 다시 생각해 볼 질문만 보여 줍니다.
+-->
+<meta name="description" content="닫힌구간에서 이차함수의 최대·최소를 풀기 전에, 후보 x·최솟값·최댓값을 3지선다로 고르고 이유를 적는 3문항 미니 진단. 익명 응답으로 오늘의 설명·활동을 고르고 저장해요.">
+<meta name="theme-color" content="#3A55C7">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233A55C7'/%3E%3Crect x='22' y='10' width='22' height='44' fill='white' opacity='.25'/%3E%3Cpath d='M10 14 Q32 70 54 14' stroke='white' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>3문항 미니 진단 — 제한된 구간의 최대·최소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1D1C33;
+    --ink-soft:#514E72;
+    --paper:#F4F4FB;
+    --surface:#FFFFFF;
+    --line:#E4E2F1;
+    --grid:#ECEBF5;
+    --blue:#33499E;
+    --blue-fill:#3A55C7;
+    --blue-soft:#E9ECFB;
+    --violet:#5B3E9E;
+    --violet-fill:#6C48B8;
+    --violet-soft:#EFE8FA;
+    --amber:#A35A0B;
+    --amber-soft:#FBF0E1;
+    --base:#9A98B3;
+    --radius:18px;
+    --font-display:'Gowun Batang', 'Nanum Myeongjo', serif;
+    --font-body:'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --font-math:'Cambria Math', 'STIX Two Math', 'Times New Roman', serif;
+  }
+
+  *{ box-sizing:border-box; }
+  [hidden]{ display:none !important; }
+
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .app{
+    max-width:640px;
+    margin:0 auto;
+    padding:12px 16px 40px;
+  }
+  .sr-only{
+    position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+  button, input, textarea{ font-family:inherit; font-size:inherit; color:inherit; }
+  button{ touch-action:manipulation; }
+  :focus-visible{ outline:3px solid var(--violet-fill); outline-offset:2px; }
+
+  /* ---------- top ---------- */
+  .top{
+    background:linear-gradient(120deg, var(--blue-fill) 0%, var(--violet-fill) 100%);
+    color:#fff;
+    border-radius:22px;
+    padding:22px 22px 20px;
+    margin-bottom:16px;
+  }
+  .top .eyebrow{ margin:0; font-size:13px; letter-spacing:0.04em; opacity:0.9; }
+  .top h1{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:26px;
+    line-height:1.3;
+    margin:6px 0 8px;
+    text-wrap:balance;
+  }
+  .top .sub{ margin:0; font-size:14px; color:rgba(255,255,255,0.9); }
+  .steps{
+    list-style:none; margin:14px 0 0; padding:0;
+    display:flex; gap:6px; flex-wrap:wrap;
+  }
+  .steps li{
+    font-size:13px; font-weight:600;
+    padding:4px 11px; border-radius:100px;
+    background:rgba(255,255,255,0.16);
+    color:rgba(255,255,255,0.85);
+  }
+  .steps li.is-on{ background:#fff; color:var(--blue); }
+
+  /* ---------- cards ---------- */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px 18px 18px;
+    margin-bottom:14px;
+  }
+  .card h2{
+    font-size:18px; font-weight:600;
+    margin:0 0 4px;
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  }
+  .card h2 .no{
+    display:inline-grid; place-items:center;
+    width:26px; height:26px; border-radius:50%;
+    background:var(--violet-soft); color:var(--violet);
+    font-size:14px;
+  }
+  .who{
+    font-size:12px; font-weight:600;
+    padding:2px 9px; border-radius:100px;
+    background:var(--amber-soft); color:var(--amber);
+  }
+  .card h3{ font-size:16px; font-weight:600; margin:18px 0 8px; }
+  .card .lead{ margin:0 0 14px; color:var(--ink-soft); font-size:14.5px; }
+
+  /* math */
+  .m{ font-family:var(--font-math); white-space:nowrap; }
+  i{ font-family:var(--font-math); font-style:italic; }
+  sup{ font-size:.68em; line-height:0; }
+  .eq{
+    font-family:var(--font-math);
+    font-size:24px;
+    text-align:center;
+    padding:12px 8px;
+    margin:0 0 14px;
+    background:var(--paper);
+    border-radius:12px;
+    overflow-x:auto;
+    white-space:nowrap;
+  }
+  .eq .iv{ display:block; font-size:18px; color:var(--blue); margin-top:2px; }
+
+  /* condition steppers */
+  .params{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; margin:0 0 12px; }
+  .param{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 6px 6px 12px; border:1px solid var(--line); border-radius:14px; }
+  .param .pl{ font-size:15px; font-weight:600; }
+  .param .pl small{ display:block; white-space:nowrap; font-size:12px; font-weight:400; color:var(--ink-soft); line-height:1.3; }
+  .stepper{
+    display:inline-flex; align-items:center;
+    border:2px solid var(--line); border-radius:12px;
+    background:var(--surface);
+  }
+  .stepper:focus-within{ border-color:var(--violet-fill); }
+  .stepper button{
+    width:40px; height:44px; border:0; background:none;
+    color:var(--violet); font-size:22px; cursor:pointer;
+  }
+  .stepper button:disabled{ color:#C9C7DC; cursor:not-allowed; }
+  .stepper output{
+    min-width:3ch; text-align:center;
+    font-family:var(--font-math); font-size:21px; font-weight:700;
+    color:var(--violet);
+  }
+
+  /* buttons */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    min-height:48px; padding:10px 18px;
+    border-radius:14px;
+    border:2px solid transparent;
+    font-size:16px; font-weight:600;
+    cursor:pointer;
+  }
+  .btn-primary{ background:var(--blue); color:#fff; }
+  .btn-violet{ background:var(--violet); color:#fff; }
+  .btn-ghost{ background:var(--surface); color:var(--blue); border-color:var(--line); }
+  .btn-small{ min-height:40px; padding:6px 14px; font-size:14px; border-radius:12px; }
+  .btn:disabled{ opacity:.42; cursor:not-allowed; }
+  .btn-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+  .btn-row .btn{ flex:1 1 180px; }
+  .btn-row.tight .btn{ flex:0 1 auto; }
+
+  textarea, input[type=text]{
+    width:100%;
+    padding:10px 12px;
+    border:2px solid var(--line); border-radius:12px;
+    background:var(--surface);
+    line-height:1.55;
+  }
+  textarea{ min-height:60px; resize:vertical; }
+  textarea:focus, input[type=text]:focus{ outline:none; border-color:var(--violet-fill); }
+  .field-label{ display:block; font-weight:600; margin:12px 0 6px; font-size:15px; }
+  .field-label small{ font-weight:400; color:var(--ink-soft); }
+  .hint{ margin:8px 0 0; font-size:14px; color:var(--ink-soft); min-height:1.4em; }
+
+  /* intro */
+  .nick-row{ display:grid; grid-template-columns:auto 1fr; align-items:center; gap:6px 10px; margin:4px 0 14px; }
+  .nick-row label{ font-weight:600; }
+  .nick-row input{ max-width:220px; }
+  .nick-row small{ grid-column:1 / -1; color:var(--ink-soft); font-size:13px; }
+  .intro-box{
+    display:flex; gap:10px; align-items:flex-start; justify-content:space-between;
+    padding:14px 16px; border-radius:14px;
+    background:var(--violet-soft);
+    margin:0 0 12px;
+  }
+  .intro-box p{ margin:0; font-family:var(--font-display); font-size:18px; line-height:1.55; color:var(--violet); white-space:pre-wrap; }
+  .intro-box .btn{ flex:none; }
+  .problem{ margin:0 0 10px; font-size:15.5px; }
+
+  /* graph */
+  .graph-wrap svg{ display:block; width:100%; height:auto; border-radius:12px; border:1px solid var(--line); }
+  .legend{
+    list-style:none; margin:8px 0 0; padding:0;
+    display:flex; flex-wrap:wrap; gap:4px 14px;
+    font-size:13px; color:var(--ink-soft);
+  }
+  .legend li{ display:flex; align-items:center; gap:6px; }
+  .legend svg{ flex:none; }
+
+  /* questions */
+  .qbox{ border:1px solid var(--line); border-radius:16px; padding:14px 14px 12px; margin:14px 0 0; min-width:0; }
+  .qbox legend{ font-weight:600; padding:0 6px; margin-left:-6px; font-size:16px; line-height:1.5; }
+  .qno{
+    display:inline-grid; place-items:center;
+    width:24px; height:24px; border-radius:8px; margin-right:6px;
+    background:var(--blue); color:#fff; font-size:13px;
+    vertical-align:1px;
+  }
+  .opts{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin:6px 0 0; }
+  .opt{ position:relative; }
+  .opt input{ position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+  .opt span{
+    display:flex; align-items:center; gap:8px;
+    min-height:52px; padding:8px 12px;
+    border:2px solid var(--line); border-radius:12px;
+    font-family:var(--font-math); font-size:18px;
+    background:var(--surface);
+  }
+  .opt .ol{
+    flex:none; display:inline-grid; place-items:center;
+    width:24px; height:24px; border-radius:50%;
+    background:var(--paper); color:var(--ink-soft);
+    font-family:var(--font-body); font-size:13px; font-weight:600;
+  }
+  .opt input:checked + span{ border-color:var(--violet-fill); background:var(--violet-soft); color:var(--violet); font-weight:700; }
+  .opt input:checked + span .ol{ background:var(--violet-fill); color:#fff; }
+  .opt input:focus-visible + span{ outline:3px solid var(--violet-fill); outline-offset:2px; }
+  .opt input:disabled{ cursor:default; }
+  .opt.is-key span{ box-shadow:inset 0 0 0 2px var(--blue-fill); }
+  .opt.is-key span::after{
+    content:'해설의 답'; position:absolute; top:-9px; right:10px;
+    padding:0 6px; background:var(--surface); line-height:18px;
+    font-family:var(--font-body); font-size:12px; font-weight:600; color:var(--blue);
+  }
+
+  .fb{ margin:12px 0 0; padding:12px 14px; border-radius:12px; background:var(--paper); font-size:15px; }
+  .fb:focus{ outline:none; }
+  .fb p{ margin:0; }
+  .fb p + p, .fb p + ul, .fb ul + p{ margin-top:8px; }
+  .fb .calc{ margin:6px 0 0; padding:0; list-style:none; }
+  .fb .calc li{ font-family:var(--font-math); font-size:16.5px; padding:2px 0; white-space:nowrap; overflow-x:auto; }
+  .fb .calc li.is-min{ color:var(--blue); font-weight:700; }
+  .fb .calc li.is-max{ color:var(--violet); font-weight:700; }
+  .fb .ask{ padding:8px 10px; background:var(--amber-soft); border-radius:10px; color:#6E3F08; }
+  .fb .ask.ok{ background:var(--blue-soft); color:var(--blue); }
+  .tag{
+    display:inline-block; padding:2px 10px; border-radius:100px;
+    font-size:13px; font-weight:600; white-space:nowrap;
+    margin-right:4px;
+  }
+  .tag-same{ background:var(--blue-soft); color:var(--blue); }
+  .tag-diff{ background:var(--amber-soft); color:var(--amber); }
+
+  .summary{ margin:16px 0 0; padding:14px 16px; border-radius:14px; border:2px dashed var(--line); }
+  .summary p{ margin:0; }
+  .summary p + p{ margin-top:6px; }
+  .summary .note{ font-size:14px; color:var(--ink-soft); }
+
+  /* teacher */
+  .tally{ display:grid; gap:12px; }
+  .tq{ border:1px solid var(--line); border-radius:14px; padding:10px 12px; }
+  .tq-head{ display:flex; justify-content:space-between; gap:8px; font-weight:600; font-size:14.5px; margin-bottom:4px; }
+  .tq-head span:last-child{ color:var(--ink-soft); font-weight:500; }
+  .trow{ display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px; padding:4px 0; }
+  .trow .ol{
+    display:inline-grid; place-items:center;
+    width:24px; height:24px; border-radius:50%;
+    background:var(--paper); color:var(--ink-soft);
+    font-size:13px; font-weight:600;
+  }
+  .trow .lab{ font-family:var(--font-math); font-size:16px; }
+  .trow .lab small{ display:block; font-family:var(--font-body); font-size:12.5px; color:var(--ink-soft); }
+  .trow .lab small.key{ color:var(--blue); font-weight:600; }
+  .cnt{ display:inline-flex; align-items:center; border:2px solid var(--line); border-radius:12px; }
+  .cnt:focus-within{ border-color:var(--violet-fill); }
+  .cnt button{ width:36px; height:40px; border:0; background:none; color:var(--violet); font-size:20px; cursor:pointer; }
+  .cnt input{
+    width:3.4ch; border:0; background:none; text-align:center; padding:0;
+    font-family:var(--font-math); font-size:18px; font-weight:700; color:var(--violet);
+    -moz-appearance:textfield; appearance:textfield;
+  }
+  .cnt input::-webkit-outer-spin-button, .cnt input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .cnt input:focus{ outline:none; }
+
+  details.box{ margin:12px 0 0; border:1px solid var(--line); border-radius:14px; padding:10px 12px; }
+  details.box > summary{ cursor:pointer; font-weight:600; font-size:15px; }
+  details.box[open] > summary{ margin-bottom:8px; }
+
+  .locked-note{ margin:14px 0 0; padding:12px 14px; border-radius:12px; background:var(--paper); color:var(--ink-soft); font-size:14.5px; }
+  .picks{ display:grid; gap:8px; }
+  .pick{ position:relative; }
+  .pick input{ position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+  .pick span{ display:block; padding:10px 12px; border:2px solid var(--line); border-radius:12px; font-size:14.5px; }
+  .pick span b{ display:flex; justify-content:space-between; gap:8px; font-size:15px; }
+  .pick span em{ font-style:normal; font-size:12.5px; font-weight:600; color:var(--amber); white-space:nowrap; }
+  .pick span em.zero{ color:var(--ink-soft); font-weight:500; }
+  .pick input:checked + span{ border-color:var(--violet-fill); background:var(--violet-soft); }
+  .pick input:focus-visible + span{ outline:3px solid var(--violet-fill); outline-offset:2px; }
+
+  .pat{ width:100%; border-collapse:collapse; font-size:14px; margin:0 0 10px; }
+  .pat caption{ text-align:left; font-weight:600; padding:6px 0; }
+  .pat th, .pat td{ padding:6px 4px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+  .pat th{ font-size:12.5px; color:var(--ink-soft); font-weight:600; }
+  .pat td.v{ font-family:var(--font-math); font-size:15px; white-space:nowrap; }
+  .pat td.n{ text-align:right; white-space:nowrap; }
+  .pat .key{ color:var(--blue); font-weight:600; }
+
+  .vlist{ margin:6px 0; padding:0; list-style:none; }
+  .vlist li{ font-family:var(--font-math); font-size:15.5px; white-space:nowrap; overflow-x:auto; }
+  .itable{ border-collapse:collapse; margin:6px 0; font-family:var(--font-math); font-size:15px; }
+  .itable th, .itable td{ border:1px solid var(--line); padding:3px 8px; text-align:center; }
+  .itable .is-min{ background:var(--blue-soft); color:var(--blue); font-weight:700; }
+  .itable .is-max{ background:var(--violet-soft); color:var(--violet); font-weight:700; }
+  .scroll-x{ overflow-x:auto; }
+
+  .reasons{ margin:0; padding:0; list-style:none; display:grid; gap:6px; font-size:14.5px; }
+  .reasons li{ padding:6px 10px; background:var(--paper); border-radius:10px; }
+  .reasons .ol{ font-weight:600; color:var(--ink-soft); margin-right:6px; }
+
+  .plans{ list-style:none; margin:0; padding:0; display:grid; gap:10px; }
+  .plans li{ border:1px solid var(--line); border-radius:14px; padding:12px 14px; font-size:14.5px; }
+  .plans .head{ display:flex; justify-content:space-between; gap:8px; align-items:baseline; flex-wrap:wrap; }
+  .plans .head b{ font-size:13px; color:var(--ink-soft); }
+  .plans p{ margin:4px 0 0; }
+  .plans .k{ color:var(--ink-soft); font-size:13px; margin-right:4px; }
+  .plans .memo{ margin-top:6px; padding:6px 10px; background:var(--violet-soft); border-radius:10px; white-space:pre-wrap; }
+  .empty{ color:var(--ink-soft); font-size:14.5px; margin:0; }
+
+  /* manual copy sheet */
+  .manual{
+    position:fixed; left:0; right:0; bottom:0; z-index:20;
+    background:var(--surface);
+    border-top:2px solid var(--violet-fill);
+    box-shadow:0 -8px 24px rgba(29,28,51,.18);
+    padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+  }
+  .manual-inner{ max-width:640px; margin:0 auto; }
+  .manual p{ margin:0 0 8px; font-size:14.5px; }
+  .manual textarea{ min-height:140px; font-family:ui-monospace, Consolas, monospace; font-size:13px; }
+
+  .toast{
+    position:fixed; left:50%; bottom:20px; transform:translateX(-50%);
+    max-width:calc(100% - 32px);
+    background:var(--ink); color:#fff;
+    padding:10px 16px; border-radius:12px;
+    font-size:14.5px;
+    box-shadow:0 6px 20px rgba(29,28,51,.25);
+    z-index:30;
+  }
+
+  footer{ text-align:center; font-size:13px; color:var(--ink-soft); margin-top:20px; }
+
+  @media (max-width:520px){
+    .opts{ grid-template-columns:1fr; }
+    .intro-box{ flex-direction:column; }
+  }
+  @media (min-width:600px){
+    .top h1{ font-size:30px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <p class="eyebrow">공통수학1 · 제한된 구간에서 이차함수의 최대·최소 [10공수1-02-06] · sunsky 선생님</p>
+    <h1>3문항 미니 진단</h1>
+    <p class="sub">풀이보다 먼저 생각을 확인해요. 후보 <i>x</i>, 최솟값, 최댓값을 하나씩 고르고 이유를 적은 뒤 확인해요. 점수는 매기지 않아요.</p>
+    <ol class="steps" aria-label="수업 단계">
+      <li id="st1" class="is-on">① 조건 정하기</li>
+      <li id="st2">② 도입 질문</li>
+      <li id="st3">③ 오늘의 수업 고르기</li>
+    </ol>
+  </header>
+
+  <main>
+    <!-- ① 조건 -->
+    <section class="card" id="cardCond" aria-labelledby="hCond">
+      <h2 id="hCond"><span class="no">1</span>조건 정하기 <span class="who">교사</span></h2>
+      <p class="lead"><span class="m"><i>f</i>(<i>x</i>) = <i>a</i>(<i>x</i> − <i>h</i>)<sup>2</sup> + <i>k</i></span>와 닫힌구간 <span class="m"><i>p</i> ≤ <i>x</i> ≤ <i>q</i></span>를 정해요(<i>a</i> 1~3, <i>h</i>·<i>k</i> −3~3, 양 끝 −4~4의 정수, <i>p</i> &lt; <i>q</i>). 조건이나 선택지 순서를 바꾸면 학생 선택·이유·확인 결과·응답 수를 지워요.</p>
+      <div class="eq" id="eqText" aria-live="polite"></div>
+      <div class="params">
+        <div class="param" role="group" aria-labelledby="lbl-a">
+          <span class="pl" id="lbl-a"><i>a</i><small>1 ~ 3</small></span>
+          <span class="stepper">
+            <button type="button" data-cond="a" data-d="-1" aria-label="a 1 줄이기">−</button>
+            <output id="out-a" aria-live="polite"></output>
+            <button type="button" data-cond="a" data-d="1" aria-label="a 1 늘리기">+</button>
+          </span>
+        </div>
+        <div class="param" role="group" aria-labelledby="lbl-h">
+          <span class="pl" id="lbl-h"><i>h</i><small>−3 ~ 3</small></span>
+          <span class="stepper">
+            <button type="button" data-cond="h" data-d="-1" aria-label="h 1 줄이기">−</button>
+            <output id="out-h" aria-live="polite"></output>
+            <button type="button" data-cond="h" data-d="1" aria-label="h 1 늘리기">+</button>
+          </span>
+        </div>
+        <div class="param" role="group" aria-labelledby="lbl-k">
+          <span class="pl" id="lbl-k"><i>k</i><small>−3 ~ 3</small></span>
+          <span class="stepper">
+            <button type="button" data-cond="k" data-d="-1" aria-label="k 1 줄이기">−</button>
+            <output id="out-k" aria-live="polite"></output>
+            <button type="button" data-cond="k" data-d="1" aria-label="k 1 늘리기">+</button>
+          </span>
+        </div>
+        <div class="param" role="group" aria-labelledby="lbl-p">
+          <span class="pl" id="lbl-p"><i>p</i><small>왼쪽 끝</small></span>
+          <span class="stepper">
+            <button type="button" data-cond="p" data-d="-1" aria-label="왼쪽 끝 1 줄이기">−</button>
+            <output id="out-p" aria-live="polite"></output>
+            <button type="button" data-cond="p" data-d="1" aria-label="왼쪽 끝 1 늘리기">+</button>
+          </span>
+        </div>
+        <div class="param" role="group" aria-labelledby="lbl-q">
+          <span class="pl" id="lbl-q"><i>q</i><small>오른쪽 끝</small></span>
+          <span class="stepper">
+            <button type="button" data-cond="q" data-d="-1" aria-label="오른쪽 끝 1 줄이기">−</button>
+            <output id="out-q" aria-live="polite"></output>
+            <button type="button" data-cond="q" data-d="1" aria-label="오른쪽 끝 1 늘리기">+</button>
+          </span>
+        </div>
+      </div>
+      <div class="btn-row tight">
+        <button type="button" class="btn btn-ghost btn-small" data-preset="0">기본 예시</button>
+        <button type="button" class="btn btn-ghost btn-small" data-preset="1">예시 2</button>
+        <button type="button" class="btn btn-ghost btn-small" data-preset="2">예시 3</button>
+        <button type="button" class="btn btn-ghost btn-small" id="randBtn">무작위</button>
+        <button type="button" class="btn btn-ghost btn-small" id="shuffleBtn">선택지 순서 섞기</button>
+      </div>
+      <p class="hint" id="condHint" aria-live="polite"></p>
+    </section>
+
+    <!-- ② 도입 -->
+    <section class="card" id="cardIntro" aria-labelledby="hIntro">
+      <h2 id="hIntro"><span class="no">2</span>도입 질문</h2>
+      <div class="nick-row">
+        <label for="nick">별명</label>
+        <input type="text" id="nick" maxlength="12" placeholder="[내 별명]" autocomplete="off" spellcheck="false">
+        <small>실제 이름 대신 별명을 써요. 별명은 저장하지 않아요.</small>
+      </div>
+
+      <div class="intro-box">
+        <p id="introText"></p>
+        <button type="button" class="btn btn-ghost btn-small" id="introEditBtn" aria-expanded="false" aria-controls="introEdit">질문 수정</button>
+      </div>
+      <div id="introEdit" hidden>
+        <label class="field-label" for="introIn">도입 질문 <small>(240자까지)</small></label>
+        <textarea id="introIn" maxlength="240" rows="3"></textarea>
+        <div class="btn-row tight">
+          <button type="button" class="btn btn-primary btn-small" id="introDone">수정 완료</button>
+          <button type="button" class="btn btn-ghost btn-small" id="introReset">기본 질문으로</button>
+        </div>
+      </div>
+
+      <p class="problem" id="problem"></p>
+      <div class="graph-wrap" id="graph"></div>
+      <ul class="legend" id="legend"></ul>
+
+      <div id="questions"></div>
+      <div class="summary" id="summary" hidden tabindex="-1"></div>
+    </section>
+
+    <!-- ③ 수업 고르기 -->
+    <section class="card" id="cardClass" aria-labelledby="hClass">
+      <h2 id="hClass"><span class="no">3</span>익명 응답으로 오늘의 수업 고르기 <span class="who">교사</span></h2>
+      <p class="lead">손 들기·응답 카드·학생용 HTML로 모은 <b>선택지별 응답 수</b>만 적어요. 이름은 받지 않아요.</p>
+      <div class="tally" id="tally"></div>
+
+      <details class="box" id="pasteBox">
+        <summary>학생용 HTML에서 복사한 응답 붙여넣기</summary>
+        <p class="hint" style="margin-top:0">학생들이 보낸 응답을 여러 개 이어 붙여도 돼요. 별명은 세지도 저장하지도 않고, 응답 번호와 이유만 읽어요. 이유는 이 화면에만 보이고 저장되지 않아요.</p>
+        <textarea id="pasteIn" rows="5" placeholder="[6주차 미니 진단] 코드: …&#10;별명: …&#10;응답: 1가 2나 3다&#10;이유1: …"></textarea>
+        <div class="btn-row tight">
+          <button type="button" class="btn btn-ghost btn-small" id="pasteBtn">붙여넣은 응답으로 응답 수 바꾸기</button>
+        </div>
+        <p class="hint" id="pasteHint" aria-live="polite"></p>
+      </details>
+
+      <p class="locked-note" id="teacherLocked">세 문항을 모두 확인하면 선택지별 생각 패턴, 교사용 검산, 오늘의 설명·활동 제안이 나타나요. (정답 공개 전에는 숨겨 둬요.)</p>
+
+      <div id="teacherPanel" hidden>
+        <h3>선택지별 생각 패턴</h3>
+        <div id="patterns"></div>
+        <p class="hint" style="margin-top:0">고른 답만으로는 이유를 알 수 없어요. 학생이 쓴 이유와 함께 보고, 아래 제안 중에서 골라 주세요.</p>
+
+        <div id="reasonWrap" hidden>
+          <h3>학생이 쓴 이유 <small style="font-weight:400;color:var(--ink-soft)">(별명 없이, 저장 안 함)</small></h3>
+          <div id="pastedReasons"></div>
+        </div>
+
+        <h3 id="hExp">오늘의 설명 고르기</h3>
+        <div class="picks" id="expList" role="radiogroup" aria-labelledby="hExp"></div>
+        <h3 id="hAct">오늘의 활동 고르기</h3>
+        <div class="picks" id="actList" role="radiogroup" aria-labelledby="hAct"></div>
+
+        <label class="field-label" for="memo">수업 메모 <small>(학생 이름은 쓰지 마세요)</small></label>
+        <textarea id="memo" rows="3" placeholder="예: 꼭짓점을 후보에 넣은 응답이 많아서, 구간 밖을 가리고 보는 설명부터 시작."></textarea>
+        <div class="btn-row">
+          <button type="button" class="btn btn-violet" id="savePlanBtn" disabled>이 수업 계획 저장하기</button>
+        </div>
+        <p class="hint" id="planHint" aria-live="polite">오늘의 설명이나 활동을 하나 이상 고르면 저장할 수 있어요.</p>
+
+        <details class="box" id="verifyBox">
+          <summary>교사용 검산</summary>
+          <div id="verifyBody"></div>
+          <div class="btn-row tight">
+            <button type="button" class="btn btn-ghost btn-small" id="verifyAllBtn">가능한 모든 조건 자동 검산</button>
+          </div>
+          <p class="hint" id="verifyAllOut" aria-live="polite"></p>
+        </details>
+      </div>
+
+      <h3>저장한 수업 계획 <small style="font-weight:400;color:var(--ink-soft)">(이 브라우저에 저장)</small></h3>
+      <ol class="plans" id="plans" reversed></ol>
+      <div class="btn-row tight" id="planBtns" hidden>
+        <button type="button" class="btn btn-ghost btn-small" id="copyPlansBtn">저장한 계획 복사</button>
+      </div>
+    </section>
+
+    <!-- 내보내기 -->
+    <section class="card" id="cardExport" aria-labelledby="hExport">
+      <h2 id="hExport">학생용·교사용 HTML 내보내기</h2>
+      <p class="lead"><b>학생용</b>에는 도입 질문, 그래프, 세 문항과 이유 칸, 응답 복사 버튼만 들어가요(정답·해설·교사 메모·응답 집계 없음). <b>교사용</b>에는 검산, 문항별 생각 패턴, 응답 수와 수업 메모가 들어가요. 지금 화면의 조건과 선택지 순서 그대로 만들어요.</p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" id="dlStudent">학생용 HTML 받기</button>
+        <button type="button" class="btn btn-ghost" id="cpStudent">학생용 코드 복사</button>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-violet" id="dlTeacher">교사용 HTML 받기</button>
+        <button type="button" class="btn btn-ghost" id="cpTeacher">교사용 코드 복사</button>
+      </div>
+      <p class="hint">내려받기가 막힌 환경에서는 '코드 복사'로 복사해 메모장에 붙여 넣고 .html로 저장하세요. 자동 복사도 안 되면 수동 복사 칸이 열려요.</p>
+    </section>
+  </main>
+
+  <footer>만든 사람: sunsky · 외부 AI API 없이 브라우저에서 직접 계산합니다.</footer>
+</div>
+
+<div class="manual" id="manual" role="dialog" aria-modal="false" aria-labelledby="manualMsg" hidden>
+  <div class="manual-inner">
+    <p id="manualMsg">자동 복사가 안 됐어요. 아래 내용을 직접 복사하세요. (PC: Ctrl+C · 모바일: 길게 눌러 '복사')</p>
+    <textarea id="manualTa" readonly aria-label="복사할 내용"></textarea>
+    <div class="btn-row tight">
+      <button type="button" class="btn btn-primary btn-small" id="manualSelect">전체 선택</button>
+      <button type="button" class="btn btn-ghost btn-small" id="manualClose">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* CORE-START — 계산은 모두 이 블록에서 한다(검산 스크립트도 이 블록을 그대로 읽는다). */
+  const MINUS = '−';
+  const num = n => (n < 0 ? MINUS + Math.abs(n) : String(n));
+  const LET = ['가', '나', '다'];
+  const RANGE = { a:[1, 3], h:[-3, 3], k:[-3, 3], p:[-4, 4], q:[-4, 4] };
+
+  function validCond(c){
+    return ['a', 'h', 'k', 'p', 'q'].every(key => Number.isInteger(c[key]) && c[key] >= RANGE[key][0] && c[key] <= RANGE[key][1]) && c.p < c.q;
+  }
+  const f = (c, x) => c.a * (x - c.h) * (x - c.h) + c.k;
+
+  // 후보: 양 끝 + 구간 안의 꼭짓점. 후보마다 직접 대입해 비교한다.
+  function analyze(c){
+    const place = (c.h < c.p || c.h > c.q) ? 'out' : (c.h === c.p || c.h === c.q) ? 'edge' : 'in';
+    const xs = place === 'in' ? [c.p, c.h, c.q] : [c.p, c.q];
+    const vals = xs.map(x => ({ x, y: f(c, x) }));
+    const ys = vals.map(v => v.y);
+    const m = Math.min(...ys), M = Math.max(...ys);
+    return {
+      place, xs, vals, m, M,
+      minXs: vals.filter(v => v.y === m).map(v => v.x),
+      maxXs: vals.filter(v => v.y === M).map(v => v.x)
+    };
+  }
+
+  const setLabel = xs => 'x = ' + xs.map(num).join(', ');
+
+  // 문항마다 opts[0]이 해설의 답이고, 나머지는 흔히 보이는 생각에서 나온 수다. 화면 순서는 state.order가 정한다.
+  function buildQuestions(c){
+    const an = analyze(c);
+    const sortU = xs => [...new Set(xs)].sort((u, v) => u - v);
+
+    const q1pool = an.place === 'out'
+      ? [{ xs: sortU([c.h, c.p, c.q]), tag: 'vertexAlways' }, { xs: [c.h], tag: 'vertexOnly' }]
+      : an.place === 'in'
+        ? [{ xs: [c.p, c.q], tag: 'endsOnly' }, { xs: [c.h], tag: 'vertexOnly' }]
+        : [{ xs: [c.h], tag: 'vertexOnly' }, { xs: [c.p, (c.p + c.q) / 2, c.q], tag: 'midpoint' }];
+    const q1 = {
+      key: 'cand',
+      opts: [{ label: setLabel(an.xs), correct: true, tag: null }]
+        .concat(q1pool.map(o => ({ label: setLabel(o.xs), correct: false, tag: o.tag })))
+    };
+
+    const xMin = an.minXs[0], xMax = an.maxXs[an.maxXs.length - 1];
+    const calcPool = x => {
+      const r = [];
+      if (c.a !== 1) r.push({ v: (x - c.h) * (x - c.h) + c.k, tag: 'calc' });   // a배를 빠뜨림
+      if (c.h !== 0) r.push({ v: c.a * (x + c.h) * (x + c.h) + c.k, tag: 'calc' }); // h의 부호를 바꿈
+      return r;
+    };
+    const minPool = [];
+    if (an.place === 'out') minPool.push({ v: c.k, tag: 'vertexAlways' });
+    if (an.place === 'in') minPool.push({ v: Math.min(f(c, c.p), f(c, c.q)), tag: 'endsOnly' });
+    minPool.push({ v: xMin, tag: 'xVsValue' }, { v: an.M, tag: 'minMaxSwap' }, ...calcPool(xMin));
+
+    const maxPool = [];
+    if (an.place === 'in') maxPool.push({ v: Math.min(f(c, c.p), f(c, c.q)), tag: 'nearEnd' });
+    maxPool.push({ v: xMax, tag: 'xVsValue' }, { v: an.m, tag: 'minMaxSwap' }, ...calcPool(xMax));
+
+    const numQ = (key, ans, pool) => {
+      const opts = [{ label: num(ans), v: ans, correct: true, tag: null }];
+      const used = new Set([ans]);
+      for (const o of pool){
+        if (opts.length === 3) break;
+        if (!used.has(o.v)){ used.add(o.v); opts.push({ label: num(o.v), v: o.v, correct: false, tag: o.tag }); }
+      }
+      for (let d = 1; opts.length < 3; d++){
+        for (const v of [ans + d, ans - d]){
+          if (opts.length < 3 && !used.has(v)){ used.add(v); opts.push({ label: num(v), v, correct: false, tag: 'calc' }); }
+        }
+      }
+      return { key, opts };
+    };
+
+    return { an, qs: [q1, numQ('min', an.m, minPool), numQ('max', an.M, maxPool)] };
+  }
+
+  // f(4) = (4 − 1)² − 2 = 9 − 2 = 7
+  function calcLine(c, x){
+    const d = x - c.h, sq = d * d, y = f(c, x);
+    const inner = c.h === 0 ? num(x) : num(x) + (c.h > 0 ? ' − ' + c.h : ' + ' + (-c.h));
+    const sqPart = (c.h === 0 && x >= 0) ? inner + '²' : '(' + inner + ')²';
+    const aPart = c.a === 1 ? '' : c.a + ' × ';
+    const kPart = c.k === 0 ? '' : (c.k > 0 ? ' + ' + c.k : ' − ' + (-c.k));
+    let s = 'f(' + num(x) + ') = ' + aPart + sqPart + kPart;
+    const mid = (c.a === 1 ? String(sq) : c.a + ' × ' + sq) + kPart;
+    if (mid !== num(y)) s += ' = ' + mid;
+    return s + ' = ' + num(y);
+  }
+
+  // 응답 코드: 조건과 화면에 보이는 선택지만으로 만든다(어느 것이 해설의 답인지는 담지 않는다).
+  function codeOf(c, labels){
+    let hsh = 0x811c9dc5;
+    const s = [c.a, c.h, c.k, c.p, c.q].join(',') + '|' + labels.join('|');
+    for (let i = 0; i < s.length; i++){ hsh ^= s.charCodeAt(i); hsh = Math.imul(hsh, 0x01000193) >>> 0; }
+    return hsh.toString(36).toUpperCase().padStart(5, '0').slice(-5);
+  }
+
+  // 가능한 모든 조건에서 '후보 비교' 결과를 촘촘한 직접 대입과 대조한다.
+  // N = 3360은 1~8의 공배수라, 구간 안의 모든 정수 x(꼭짓점 포함)가 표본에 정확히 들어간다.
+  function verifyAll(){
+    const N = 3360;
+    const place = { in:0, out:0, edge:0 };
+    const bad = [];
+    let total = 0;
+    for (let a = 1; a <= 3; a++) for (let h = -3; h <= 3; h++) for (let k = -3; k <= 3; k++)
+    for (let p = -4; p <= 4; p++) for (let q = p + 1; q <= 4; q++){
+      const c = { a, h, k, p, q };
+      const { an, qs } = buildQuestions(c);
+      total++; place[an.place]++;
+      let lo = Infinity, hi = -Infinity;
+      for (let i = 0; i <= N; i++){
+        const y = f(c, p + (q - p) * i / N);
+        if (y < lo) lo = y;
+        if (y > hi) hi = y;
+      }
+      if (lo !== an.m || hi !== an.M) bad.push({ c, why:'최솟값·최댓값 불일치' });
+      const want = [setLabel(an.xs), num(an.m), num(an.M)];
+      qs.forEach((qq, i) => {
+        const labels = qq.opts.map(o => o.label);
+        if (new Set(labels).size !== 3) bad.push({ c, why:(i + 1) + '번 선택지 중복' });
+        if (qq.opts.filter(o => o.correct).length !== 1 || qq.opts[0].label !== want[i]) bad.push({ c, why:(i + 1) + '번 해설의 답 오류' });
+      });
+    }
+    return { total, place, bad };
+  }
+  /* CORE-END */
+
+  const $ = id => document.getElementById(id);
+  const STORE_KEY = 'week6-mini-diagnosis-v1';
+  const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+
+  const DEFAULT_INTRO = '풀이를 쓰기 전에 먼저 생각해 봐요. 이 구간에서 f(x)가 가장 작아지는 곳과 가장 커지는 곳은 어디일까요? 답을 고르고, 그렇게 생각한 이유를 한 줄로 적어 보세요.';
+  // 기본 예시: 후보 x = 2, 4 / 최솟값 −1 / 최댓값 7 (꼭짓점 (1, −2)가 구간 밖)
+  const PRESETS = [
+    { a:1, h:1, k:-2, p:2, q:4 },
+    { a:2, h:-1, k:-3, p:-2, q:2 },
+    { a:2, h:2, k:-1, p:-1, q:2 }
+  ];
+  const STEMS = [
+    '최댓값과 최솟값을 찾으려면 어떤 <i>x</i>에서의 함숫값을 비교해야 할까요?',
+    '이 구간에서 <i>f</i>(<i>x</i>)의 <b>최솟값</b>은 얼마일까요?',
+    '이 구간에서 <i>f</i>(<i>x</i>)의 <b>최댓값</b>은 얼마일까요?'
+  ];
+  const SHORT = ['후보 x', '최솟값', '최댓값'];
+
+  const PATTERN = {
+    vertexAlways: { name:'꼭짓점을 구간과 상관없이 후보로 넣음', ask: () => '꼭짓점의 <i>x</i>좌표와 구간을 비교해 보세요. 구간 밖의 <i>x</i>에서 나온 값도 이 구간의 함숫값일까요?' },
+    vertexOnly:   { name:'꼭짓점만 보고 양 끝을 확인하지 않음', ask: c => '양 끝 <span class="m">x = ' + num(c.p) + ', ' + num(c.q) + '</span>에서의 값도 구해 봤나요? 그 값들과 비교하면 어떨까요?' },
+    endsOnly:     { name:'양 끝만 비교하고 구간 안 꼭짓점을 놓침', ask: c => '꼭짓점의 <i>x</i>좌표 <span class="m">' + num(c.h) + '</span>도 구간 안에 있어요. 그 점의 값은 양 끝 값보다 클까요, 작을까요?' },
+    midpoint:     { name:'구간의 가운데를 특별한 점으로 봄', ask: () => '구간의 가운데가 특별한 이유가 있을까요? 이 포물선에서 특별한 <i>x</i>는 어디일까요?' },
+    xVsValue:     { name:'최솟값·최댓값(f(x))과 그때의 x를 혼동', ask: () => '고른 수는 <i>x</i>값인가요, <i>f</i>(<i>x</i>)값인가요? "최솟값·최댓값"은 어느 쪽을 묻는 말일까요?' },
+    minMaxSwap:   { name:'최솟값과 최댓값을 바꿔 읽음', ask: () => '후보에서 나온 값들을 작은 것부터 늘어놓으면, 고른 수는 어디에 있나요?' },
+    nearEnd:      { name:'꼭짓점에서 가까운 끝을 최댓값으로 봄', ask: c => '두 끝 중 꼭짓점 <span class="m">x = ' + num(c.h) + '</span>에서 더 멀리 떨어진 쪽은 어디인가요?' },
+    calc:         { name:'대입 계산(부호·a배)에서 실수했을 수 있음', ask: () => '대입한 식을 한 단계씩 다시 써 볼까요? 괄호 안 → 제곱 → <i>a</i>배 → <i>k</i> 더하기 순서예요.' }
+  };
+
+  // 오늘의 설명·활동 후보. 응답 수는 '골라 볼 순서'를 알려 줄 뿐, 결정은 교사가 한다.
+  const LESSON = [
+    { tag:'vertexAlways',
+      exp:{ title:'구간 밖은 가리고 보기', body:'그래프에서 구간 밖을 종이로 가린 뒤 남은 부분에서 가장 낮은 점·높은 점을 찾아요. 꼭짓점이 가려지는 경우를 함께 확인해요.' },
+      act:{ title:'안·밖·경계 분류 카드', body:'꼭짓점의 x좌표와 구간을 적은 카드 6장을 주고, 먼저 안/밖/경계로 분류한 다음 후보 x를 적게 해요.' } },
+    { tag:'endsOnly',
+      exp:{ title:'꼭짓점이 구간 안이면 후보가 하나 더', body:'양 끝 값만 비교한 답과 꼭짓점 값을 나란히 적어, 구간 안 꼭짓점의 값이 양 끝보다 작다는 것을 직접 확인해요.' },
+      act:{ title:'세 후보 대입표 채우기', body:'x | f(x) 표에 양 끝과 꼭짓점 세 줄을 만들고, 모둠별로 대입해 가장 작은 값·큰 값에 표시해요.' } },
+    { tag:'vertexOnly',
+      exp:{ title:'꼭짓점은 후보 중 하나일 뿐', body:'같은 함수에 구간만 다른 두 경우를 나란히 놓고, 꼭짓점만으로는 최댓값을 알 수 없음을 보여 줘요.' },
+      act:{ title:'양 끝 대입 릴레이', body:'짝이 번갈아 왼쪽 끝, 오른쪽 끝을 대입하고 서로의 계산을 검산해요.' } },
+    { tag:'midpoint',
+      exp:{ title:'특별한 x는 가운데가 아니라 꼭짓점', body:'구간의 가운데와 꼭짓점의 x좌표가 다른 예를 그래프에 함께 찍어, 함숫값을 정하는 것은 꼭짓점이라는 점을 확인해요.' },
+      act:{ title:'가운데 vs 꼭짓점 값 비교', body:'구간 가운데의 값과 꼭짓점의 값을 각각 계산해 어느 쪽이 더 작은지 비교해요.' } },
+    { tag:'xVsValue',
+      exp:{ title:'최솟값은 f(x), 그때의 x는 위치', body:'"최솟값은 ○ (x = □일 때)" 문장 틀로 값과 위치를 나누어 말하게 해요.' },
+      act:{ title:'x열·f(x)열 나눠 쓰기', body:'후보표에서 x열과 f(x)열을 다른 색으로 쓰고, 답은 f(x)열에서만 고르게 해요.' } },
+    { tag:'minMaxSwap',
+      exp:{ title:'후보값을 수직선에 늘어놓기', body:'후보에서 나온 값을 수직선에 찍고, 왼쪽 끝이 최솟값·오른쪽 끝이 최댓값임을 확인해요.' },
+      act:{ title:'작은 값·큰 값 손짓 퀴즈', body:'후보값 묶음을 보여 주면 최솟값은 손을 아래로, 최댓값은 위로 가리키며 답하게 해요.' } },
+    { tag:'nearEnd',
+      exp:{ title:'꼭짓점에서 먼 끝이 더 높다', body:'a > 0인 포물선은 꼭짓점에서 멀어질수록 높아져요. |x − h|로 두 끝까지의 거리를 비교해요.' },
+      act:{ title:'거리로 예상하고 대입으로 확인', body:'두 끝까지의 거리를 먼저 적어 더 큰 쪽을 예상한 뒤, 대입해서 맞는지 확인해요.' } },
+    { tag:'calc',
+      exp:{ title:'대입 순서 한 줄씩 쓰기', body:'괄호 안 → 제곱 → a배 → k 더하기 순서를 한 줄씩 써서 부호·곱셈 실수를 찾아요.' },
+      act:{ title:'짝 검산', body:'서로의 대입식을 바꿔 읽고 한 단계씩 다시 계산해, 달라지는 곳에 표시해요.' } },
+    { tag:'confirm',
+      exp:{ title:'같은 답, 이유 말하기', body:'해설과 같은 답을 고른 학생이 이유를 말하고, 다른 학생이 "그 이유로 다른 조건에서도 될까?"를 질문해요.' },
+      act:{ title:'경계 사례로 넓히기', body:'꼭짓점이 구간 끝과 겹치는 조건, 두 끝 값이 같은 조건으로 바꿔 같은 3문항을 다시 해 봐요.' } }
+  ];
+  const LESSON_BY = Object.fromEntries(LESSON.map(l => [l.tag, l]));
+
+  const state = {
+    cond: Object.assign({}, PRESETS[0]),
+    order: null,
+    intro: DEFAULT_INTRO,
+    counts: [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+    picks: [null, null, null],
+    checked: [false, false, false],
+    pasted: null,          // { reasons:[[{j, text}]...] } — 저장하지 않음
+    planPick: { exp:null, act:null },
+    plans: []
+  };
+
+  /* ---------- 형식 ---------- */
+  function eqHTML(c){
+    const aT = c.a === 1 ? '' : String(c.a);
+    const sq = c.h === 0 ? '<i>x</i><sup>2</sup>' : '(<i>x</i> ' + (c.h > 0 ? MINUS : '+') + ' ' + Math.abs(c.h) + ')<sup>2</sup>';
+    const kT = c.k === 0 ? '' : ' ' + (c.k > 0 ? '+' : MINUS) + ' ' + Math.abs(c.k);
+    return '<i>f</i>(<i>x</i>) = ' + aT + sq + kT;
+  }
+  const ivHTML = c => num(c.p) + ' ≤ <i>x</i> ≤ ' + num(c.q);
+  const toText = html => html.replace(/<sup>2<\/sup>/g, '²').replace(/<[^>]+>/g, '');
+  const eqText = c => toText(eqHTML(c));
+  const ivText = c => toText(ivHTML(c));
+  const PLACE = { out:'구간 밖', in:'구간 안', edge:'구간의 끝(경계)' };
+
+  function model(){ return buildQuestions(state.cond); }
+  function displayed(qs){ return qs.map((q, i) => state.order[i].map(k => q.opts[k])); }
+  function currentCode(qs){ return codeOf(state.cond, displayed(qs).flat().map(o => o.label)); }
+
+  /* ---------- 선택지 순서 ---------- */
+  function randPerm(){
+    const a = [0, 1, 2];
+    for (let i = 2; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+  // 해설의 답 위치를 고정하지 않는다. 세 문항이 모두 같은 위치이거나 지금 순서와 같으면 다시 섞는다.
+  function newOrder(prev){
+    let o, tries = 0;
+    do {
+      o = [randPerm(), randPerm(), randPerm()];
+      tries++;
+    } while (tries < 50 && (
+      new Set(o.map(p => p.indexOf(0))).size === 1 ||
+      (prev && JSON.stringify(prev) === JSON.stringify(o))
+    ));
+    return o;
+  }
+
+  /* ---------- 저장 ---------- */
+  function save(){
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({
+        cond: state.cond, order: state.order, intro: state.intro, counts: state.counts, plans: state.plans
+      }));
+    } catch (e) { /* 저장할 수 없는 환경이면 이 탭에서만 유지 */ }
+  }
+  function validOrder(o){
+    return Array.isArray(o) && o.length === 3 && o.every(p => Array.isArray(p) && p.slice().sort().join() === '0,1,2');
+  }
+  function validCounts(cn){
+    return Array.isArray(cn) && cn.length === 3 && cn.every(r => Array.isArray(r) && r.length === 3 && r.every(n => Number.isInteger(n) && n >= 0 && n <= 99));
+  }
+  function load(){
+    try {
+      const s = JSON.parse(localStorage.getItem(STORE_KEY));
+      if (!s) return;
+      if (s.cond && validCond(s.cond) && validOrder(s.order)){
+        state.cond = s.cond; state.order = s.order;
+        if (validCounts(s.counts)) state.counts = s.counts;
+      }
+      if (typeof s.intro === 'string' && s.intro.trim()) state.intro = s.intro.slice(0, 240);
+      if (Array.isArray(s.plans)) state.plans = s.plans.filter(p => p && p.cond && validCond(p.cond) && validOrder(p.order)).slice(-30);
+    } catch (e) { /* ignore */ }
+  }
+
+  /* ---------- 그래프 (문자열 SVG: 학생용 HTML에도 그대로 쓴다) ---------- */
+  const PAL = { ink:'#1D1C33', soft:'#514E72', grid:'#ECEBF5', line:'#E4E2F1', blue:'#33499E', blueFill:'#3A55C7', blueSoft:'#E9ECFB', violet:'#5B3E9E', violetFill:'#6C48B8', base:'#9A98B3', amber:'#A35A0B' };
+
+  // rv: { cand, min, max } — 확인한 문항까지만 정답 점을 그린다.
+  function graphSVG(c, rv){
+    const an = analyze(c);
+    const W = 360, H = 300, T = 48, B = 8, L = 6, R = 6, XMIN = -5, XMAX = 5;
+    let lo = Math.min(0, c.k), hi = Math.max(0, an.M);
+    if (hi - lo < 6){ const add = (6 - (hi - lo)) / 2; lo -= add; hi += add; }
+    const span = hi - lo;
+    lo -= span * 0.1; hi += span * 0.13;
+    // 최솟값 점 아래에 라벨이 들어갈 자리(약 30px)를 남긴다.
+    for (let t = 0; t < 4; t++){
+      const room = (an.m - lo) / (hi - lo) * (H - T - B);
+      if (room >= 30) break;
+      lo -= (30 - room) / (H - T - B) * (hi - lo) * 1.1;
+    }
+    const X = x => L + (x - XMIN) / (XMAX - XMIN) * (W - L - R);
+    const Y = y => T + (hi - y) / (hi - lo) * (H - T - B);
+    const step = [1, 2, 5, 10, 20, 25, 50].find(s => (hi - lo) / s <= 8) || 50;
+    const F = n => n.toFixed(1);
+    const halo = 'paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round"';
+    const tx = (x, y, s, attrs) => '<text x="' + F(x) + '" y="' + F(y) + '" ' + attrs + '>' + s + '</text>';
+    const path = (x0, x1, n) => {
+      let d = '';
+      for (let i = 0; i <= n; i++){
+        const x = x0 + (x1 - x0) * i / n;
+        const y = Math.max(lo - span, Math.min(hi + span, f(c, x)));
+        d += (i ? 'L' : 'M') + F(X(x)) + ' ' + F(Y(y));
+      }
+      return d;
+    };
+    const o = [];
+    o.push('<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#fff"/>');
+    o.push('<defs><clipPath id="plotClip"><rect x="0" y="' + T + '" width="' + W + '" height="' + (H - T) + '"/></clipPath></defs>');
+
+    // 격자
+    o.push('<g stroke="' + PAL.grid + '" stroke-width="1">');
+    for (let x = XMIN; x <= XMAX; x++) o.push('<line x1="' + F(X(x)) + '" y1="' + T + '" x2="' + F(X(x)) + '" y2="' + (H - B) + '"/>');
+    for (let y = Math.ceil(lo / step) * step; y <= hi; y += step) o.push('<line x1="0" y1="' + F(Y(y)) + '" x2="' + W + '" y2="' + F(Y(y)) + '"/>');
+    o.push('</g>');
+
+    // 구간 띠
+    o.push('<rect x="' + F(X(c.p)) + '" y="' + T + '" width="' + F(X(c.q) - X(c.p)) + '" height="' + (H - T - B) + '" fill="' + PAL.blueSoft + '" opacity=".75"/>');
+
+    // 축
+    o.push('<line x1="0" y1="' + F(Y(0)) + '" x2="' + W + '" y2="' + F(Y(0)) + '" stroke="' + PAL.soft + '" stroke-width="1.3"/>');
+    o.push('<line x1="' + F(X(0)) + '" y1="' + T + '" x2="' + F(X(0)) + '" y2="' + (H - B) + '" stroke="' + PAL.soft + '" stroke-width="1.3"/>');
+    const xLabY = Y(0) + 15 > H - B - 2 ? Y(0) - 6 : Y(0) + 15;
+    for (let x = -4; x <= 4; x++){
+      if (x === 0) continue;
+      const isEnd = x === c.p || x === c.q;
+      o.push(tx(X(x), xLabY, num(x), 'font-size="' + (isEnd ? 12 : 10.5) + '" text-anchor="middle" fill="' + (isEnd ? PAL.blue : PAL.soft) + '"' + (isEnd ? ' font-weight="700"' : '') + ' ' + halo));
+    }
+    for (let y = Math.ceil(lo / step) * step; y <= hi; y += step){
+      if (y === 0 || Y(y) < T + 8) continue;
+      o.push(tx(X(0) - 4, Y(y) + 4, num(y), 'font-size="10.5" text-anchor="end" fill="' + PAL.soft + '" ' + halo));
+    }
+    o.push(tx(X(0) - 4, xLabY, 'O', 'font-size="10.5" text-anchor="end" fill="' + PAL.soft + '" font-style="italic" font-family="serif"'));
+    o.push(tx(W - 6, Y(0) - 6, 'x', 'font-size="13" font-style="italic" text-anchor="end" fill="' + PAL.soft + '" font-family="serif"'));
+    o.push(tx(X(0) + 6, T + 12, 'y', 'font-size="13" font-style="italic" fill="' + PAL.soft + '" font-family="serif"'));
+
+    // 양 끝
+    o.push('<g stroke="' + PAL.blueFill + '" stroke-width="1.5" stroke-dasharray="5 4">' +
+      '<line x1="' + F(X(c.p)) + '" y1="' + T + '" x2="' + F(X(c.p)) + '" y2="' + (H - B) + '"/>' +
+      '<line x1="' + F(X(c.q)) + '" y1="' + T + '" x2="' + F(X(c.q)) + '" y2="' + (H - B) + '"/></g>');
+    o.push('<line x1="' + F(X(c.p)) + '" y1="' + F(Y(0)) + '" x2="' + F(X(c.q)) + '" y2="' + F(Y(0)) + '" stroke="' + PAL.blueFill + '" stroke-width="4" stroke-linecap="round"/>');
+    o.push('<circle cx="' + F(X(c.p)) + '" cy="' + F(Y(0)) + '" r="4.5" fill="' + PAL.blueFill + '"/><circle cx="' + F(X(c.q)) + '" cy="' + F(Y(0)) + '" r="4.5" fill="' + PAL.blueFill + '"/>');
+    const pLab = 'x = ' + num(c.p), qLab = 'x = ' + num(c.q);
+    const pOut = X(c.p) - 4 - pLab.length * 6.6 >= 2;
+    const qOut = X(c.q) + 4 + qLab.length * 6.6 <= W - 2;
+    o.push(tx(pOut ? X(c.p) - 4 : X(c.p) + 4, T + 13, pLab, 'font-size="12" font-weight="700" fill="' + PAL.blue + '" text-anchor="' + (pOut ? 'end' : 'start') + '" ' + halo));
+    o.push(tx(qOut ? X(c.q) + 4 : X(c.q) - 4, T + (pOut || qOut ? 13 : 27), qLab, 'font-size="12" font-weight="700" fill="' + PAL.blue + '" text-anchor="' + (qOut ? 'start' : 'end') + '" ' + halo));
+
+    // 그래프: 전체는 옅게, 구간 부분은 진하게
+    o.push('<g clip-path="url(#plotClip)">');
+    o.push('<path d="' + path(XMIN, XMAX, 200) + '" fill="none" stroke="' + PAL.base + '" stroke-width="2" stroke-dasharray="6 5"/>');
+    o.push('<path d="' + path(c.p, c.q, 120) + '" fill="none" stroke="' + PAL.blueFill + '" stroke-width="3.2" stroke-linecap="round"/>');
+
+    // 확인 후에만 그리는 점들
+    const top = [];
+    if (rv.cand){
+      if (an.place === 'out'){
+        o.push('<circle cx="' + F(X(c.h)) + '" cy="' + F(Y(c.k)) + '" r="6" fill="#fff" stroke="' + PAL.base + '" stroke-width="2" stroke-dasharray="3 2"/>');
+        // 라벨은 구간 반대쪽에 둬서 후보 점·최솟값 라벨과 겹치지 않게 한다.
+        const LW = 80;
+        const left = c.h < c.p;
+        const side = left ? X(c.h) - 10 - LW >= 2 : X(c.h) + 10 + LW <= W - 2;
+        let lx, ly, anchor;
+        if (side){
+          lx = left ? X(c.h) - 10 : X(c.h) + 10; ly = Y(c.k) - 3; anchor = left ? 'end' : 'start';
+        } else {
+          lx = Math.max(44, Math.min(W - 44, X(c.h))); anchor = 'middle';
+          ly = Y(c.k) + 32 < H - B ? Y(c.k) + 19 : Y(c.k) - 22;
+        }
+        ly = Math.max(T + 14, Math.min(H - B - 16, ly));
+        top.push(tx(lx, ly, '꼭짓점 (' + num(c.h) + ', ' + num(c.k) + ')', 'font-size="11" text-anchor="' + anchor + '" fill="' + PAL.soft + '" ' + halo));
+        top.push(tx(lx, ly + 13, '구간 밖', 'font-size="11" text-anchor="' + anchor + '" fill="' + PAL.soft + '" font-weight="700" ' + halo));
+      }
+      an.vals.forEach(v => {
+        o.push('<circle cx="' + F(X(v.x)) + '" cy="' + F(Y(v.y)) + '" r="6.5" fill="#fff" stroke="' + PAL.blueFill + '" stroke-width="2.4"/>');
+      });
+    }
+    const valueLabel = (v, text, color, under) => {
+      const atP = v.x === c.p, atQ = v.x === c.q;
+      const anchor = atP ? 'start' : atQ ? 'end' : 'middle';
+      const lx = atP ? X(v.x) + 9 : atQ ? X(v.x) - 9 : X(v.x);
+      let ly = under ? Y(v.y) + 22 : Y(v.y) + 4;
+      if (!atP && !atQ) ly = under ? Y(v.y) + 22 : Y(v.y) - 12;
+      if (ly > H - B - 4) ly = Y(v.y) - 12;
+      ly = Math.max(T + 30, ly);
+      top.push(tx(lx, ly, text, 'font-size="13" font-weight="700" fill="' + color + '" text-anchor="' + anchor + '" ' + halo));
+    };
+    if (rv.min){
+      an.vals.filter(v => v.y === an.m).forEach(v => {
+        o.push('<circle cx="' + F(X(v.x)) + '" cy="' + F(Y(v.y)) + '" r="6.5" fill="' + PAL.blueFill + '" stroke="#fff" stroke-width="2"/>');
+        valueLabel(v, '최솟값 ' + num(an.m), PAL.blue, true);
+      });
+    }
+    if (rv.max){
+      an.vals.filter(v => v.y === an.M).forEach(v => {
+        o.push('<circle cx="' + F(X(v.x)) + '" cy="' + F(Y(v.y)) + '" r="6.5" fill="' + PAL.violetFill + '" stroke="#fff" stroke-width="2"/>');
+        valueLabel(v, '최댓값 ' + num(an.M), PAL.violet, false);
+      });
+    }
+    o.push('</g>');
+    o.push(top.join(''));
+
+    // 머리글: 함수식과 구간
+    o.push('<rect x="0" y="0" width="' + W + '" height="' + T + '" fill="#fff"/>');
+    o.push('<line x1="0" y1="' + T + '" x2="' + W + '" y2="' + T + '" stroke="' + PAL.line + '"/>');
+    o.push(tx(12, 21, esc(eqText(c)), 'font-size="16" font-weight="700" fill="' + PAL.ink + '" font-family="Cambria Math, STIX Two Math, Times New Roman, serif"'));
+    o.push(tx(12, 40, '구간 ' + esc(ivText(c)) + ' (양 끝 포함)', 'font-size="13" font-weight="600" fill="' + PAL.blue + '"'));
+
+    let d = '좌표평면에 ' + eqText(c) + '의 그래프가 있고, 구간 ' + ivText(c) + ' 부분이 색칠되어 있어요. 양 끝 x = ' + num(c.p) + ', x = ' + num(c.q) + '에 점선이 있어요.';
+    if (rv.cand) d += ' 후보 점: ' + an.vals.map(v => '(' + num(v.x) + ', ' + num(v.y) + ')').join(', ') + '.' + (an.place === 'out' ? ' 꼭짓점 (' + num(c.h) + ', ' + num(c.k) + ')는 구간 밖이에요.' : '');
+    if (rv.min) d += ' 최솟값 ' + num(an.m) + '.';
+    if (rv.max) d += ' 최댓값 ' + num(an.M) + '.';
+    if (!rv.cand && !rv.min && !rv.max) d += ' 최솟값·최댓값을 나타내는 점은 표시하지 않았어요.';
+
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="' + esc(d) + '" font-family="IBM Plex Sans KR, Apple SD Gothic Neo, Malgun Gothic, sans-serif">' + o.join('') + '</svg>';
+  }
+
+  function drawGraph(){
+    const rv = { cand: state.checked[0], min: state.checked[1], max: state.checked[2] };
+    $('graph').innerHTML = graphSVG(state.cond, rv);
+    const an = analyze(state.cond);
+    const items = [
+      ['<rect x="2" y="2" width="22" height="10" rx="2" fill="' + PAL.blueSoft + '" stroke="' + PAL.blueFill + '" stroke-dasharray="3 2"/>', '구간 ' + ivText(state.cond) + ' · 양 끝'],
+      ['<line x1="2" y1="7" x2="24" y2="7" stroke="' + PAL.blueFill + '" stroke-width="3"/>', '구간 안의 그래프']
+    ];
+    if (rv.cand) items.push(['<circle cx="13" cy="7" r="5" fill="#fff" stroke="' + PAL.blueFill + '" stroke-width="2"/>', '후보 점']);
+    if (rv.cand && an.place === 'out') items.push(['<circle cx="13" cy="7" r="5" fill="#fff" stroke="' + PAL.base + '" stroke-width="2" stroke-dasharray="3 2"/>', '구간 밖 꼭짓점']);
+    if (rv.min) items.push(['<circle cx="13" cy="7" r="5" fill="' + PAL.blueFill + '"/>', '최솟값']);
+    if (rv.max) items.push(['<circle cx="13" cy="7" r="5" fill="' + PAL.violetFill + '"/>', '최댓값']);
+    $('legend').innerHTML = items.map(([sw, t]) => '<li><svg width="26" height="14" viewBox="0 0 26 14" aria-hidden="true">' + sw + '</svg>' + esc(t) + '</li>').join('');
+  }
+
+  /* ---------- 조건 카드 ---------- */
+  function renderCond(){
+    const c = state.cond;
+    ['a', 'h', 'k', 'p', 'q'].forEach(key => { $('out-' + key).textContent = num(c[key]); });
+    document.querySelectorAll('[data-cond]').forEach(b => {
+      const key = b.dataset.cond, d = Number(b.dataset.d);
+      const next = Object.assign({}, c, { [key]: c[key] + d });
+      b.disabled = !validCond(next);
+    });
+    $('eqText').innerHTML = eqHTML(c) + '<span class="iv">' + ivHTML(c) + '</span>';
+  }
+
+  /* ---------- 도입 카드 ---------- */
+  function renderIntro(){
+    $('introText').textContent = state.intro;
+    $('problem').innerHTML = '구간 <b class="m">' + ivHTML(state.cond) + '</b>에서 함수 <b class="m">' + eqHTML(state.cond) + '</b>에 대해 생각해요.';
+  }
+
+  function renderQuestions(){
+    const { qs } = model();
+    const disp = displayed(qs);
+    const box = $('questions');
+    box.innerHTML = '';
+    qs.forEach((q, i) => {
+      const fs = document.createElement('fieldset');
+      fs.className = 'qbox';
+      fs.id = 'q' + i;
+      fs.innerHTML =
+        '<legend><span class="qno">' + (i + 1) + '</span>' + STEMS[i] + '</legend>' +
+        '<div class="opts">' + disp[i].map((o, j) =>
+          '<label class="opt"><input type="radio" name="q' + i + '" value="' + j + '"><span><b class="ol" aria-hidden="true">' + LET[j] + '</b><span class="sr-only">' + LET[j] + '. </span>' + esc(o.label) + '</span></label>'
+        ).join('') + '</div>' +
+        '<label class="field-label" for="r' + i + '">고른 이유 <small>(한 줄이면 충분해요 · 확인한 뒤 고쳐 써도 돼요)</small></label>' +
+        '<textarea id="r' + i + '" rows="2" maxlength="200" placeholder="' + (i === 0 ? '예: 구간의 양 끝과 … 를 비교해야 할 것 같아서' : '예: x = □을 넣으면 … 이 되어서') + '"></textarea>' +
+        '<div class="btn-row tight"><button type="button" class="btn btn-primary btn-small" data-check="' + i + '" disabled>' + (i + 1) + '번 확인하기</button></div>' +
+        '<div class="fb" id="fb' + i + '" hidden tabindex="-1" aria-live="polite"></div>';
+      box.appendChild(fs);
+    });
+  }
+
+  function explainBody(i, an){
+    const c = state.cond;
+    const iv = '<span class="m">' + ivHTML(c) + '</span>';
+    const xs = an.xs.map(num).join(', ');
+    if (i === 0){
+      let s = '<p>꼭짓점은 <span class="m">(' + num(c.h) + ', ' + num(c.k) + ')</span>이고, 꼭짓점의 <i>x</i>좌표는 ' + iv + '의 <b>' + PLACE[an.place] + '</b>에 있어요.</p>';
+      if (an.place === 'out') s += '<p>구간 밖의 <span class="m">x = ' + num(c.h) + '</span>에서 나온 값은 이 구간의 함숫값이 아니라서 비교하지 않아요. 비교할 후보는 양 끝 <b class="m">x = ' + xs + '</b>에서의 값이에요.</p>';
+      else if (an.place === 'in') s += '<p>꼭짓점이 구간 안에 있으니 양 끝과 꼭짓점, 세 곳 <b class="m">x = ' + xs + '</b>에서의 값을 비교해요.</p>';
+      else s += '<p>꼭짓점이 구간의 끝과 겹쳐요. 비교할 후보는 양 끝 <b class="m">x = ' + xs + '</b>에서의 값이고, 그중 한 곳이 꼭짓점이에요.</p>';
+      return s;
+    }
+    const lines = '<ul class="calc">' + an.vals.map(v =>
+      '<li class="' + (i === 1 && v.y === an.m ? 'is-min' : i === 2 && v.y === an.M ? 'is-max' : '') + '">' + calcLine(c, v.x) + '</li>').join('') + '</ul>';
+    const at = list => list.map(x => '<span class="m">x = ' + num(x) + '</span>').join(', ');
+    if (i === 1){
+      let s = '<p>후보 <span class="m">x = ' + xs + '</span>에 직접 대입해 비교해요.</p>' + lines;
+      s += '<p>가장 작은 값은 <b class="m">' + num(an.m) + '</b> (' + at(an.minXs) + '일 때)예요.</p>';
+      if (an.place === 'out') s += '<p>꼭짓점의 <i>y</i>좌표(<span class="m">' + num(c.k) + '</span>)는 구간 밖인 <span class="m">x = ' + num(c.h) + '</span>에서의 값이라서 최솟값이 될 수 없어요.</p>';
+      else s += '<p><span class="m"><i>a</i> = ' + c.a + ' &gt; 0</span>이라 꼭짓점이 그래프의 가장 낮은 점이고, 그 꼭짓점이 구간에 들어 있어서 꼭짓점의 <i>y</i>좌표가 최솟값이에요.</p>';
+      return s;
+    }
+    let s = '<p>같은 후보 값 중에서 가장 큰 값을 찾아요.</p>' + lines;
+    s += '<p>가장 큰 값은 <b class="m">' + num(an.M) + '</b> (' + at(an.maxXs) + '일 때)예요.</p>';
+    const dp = Math.abs(c.p - c.h), dq = Math.abs(c.q - c.h);
+    if (an.place === 'in'){
+      if (dp === dq) s += '<p>두 끝이 꼭짓점에서 같은 거리(<span class="m">' + dp + '</span>)만큼 떨어져 있어서 두 곳 모두에서 최댓값이 나와요.</p>';
+      else {
+        const far = dp > dq ? c.p : c.q, near = dp > dq ? c.q : c.p;
+        const hh = c.h < 0 ? '(' + num(c.h) + ')' : c.h;
+        s += '<p><span class="m"><i>a</i> &gt; 0</span>인 포물선은 꼭짓점에서 멀어질수록 높아져요. 꼭짓점까지의 거리를 비교하면 <span class="m">|' + num(far) + ' − ' + hh + '| = ' + Math.max(dp, dq) + ' &gt; |' + num(near) + ' − ' + hh + '| = ' + Math.min(dp, dq) + '</span>이므로 <span class="m">x = ' + num(far) + '</span>에서 최댓값이 나와요.</p>';
+      }
+    } else if (c.h <= c.p){
+      s += '<p>구간 전체가 꼭짓점의 오른쪽에 있어서, 구간 안에서는 <i>x</i>가 커질수록 <i>f</i>(<i>x</i>)도 커져요. 그래서 오른쪽 끝에서 최댓값, 왼쪽 끝에서 최솟값이에요.</p>';
+    } else {
+      s += '<p>구간 전체가 꼭짓점의 왼쪽에 있어서, 구간 안에서는 <i>x</i>가 커질수록 <i>f</i>(<i>x</i>)가 작아져요. 그래서 왼쪽 끝에서 최댓값, 오른쪽 끝에서 최솟값이에요.</p>';
+    }
+    return s;
+  }
+
+  function renderFeedback(i){
+    const { an, qs } = model();
+    const disp = displayed(qs)[i];
+    const j = state.picks[i];
+    const opt = disp[j];
+    const keyPos = state.order[i].indexOf(0);
+    let h = '<p><span class="tag ' + (opt.correct ? 'tag-same">해설의 답과 같아요' : 'tag-diff">해설의 답과 달라요') + '</span> ' +
+      '고른 답 <b class="m">' + LET[j] + '. ' + esc(opt.label) + '</b>' +
+      (opt.correct ? '' : ' · 해설의 답 <b class="m">' + LET[keyPos] + '. ' + esc(disp[keyPos].label) + '</b>') + '</p>';
+    h += explainBody(i, an);
+    h += opt.correct
+      ? '<p class="ask ok"><b>이유 확인</b> 내가 적은 이유가 위 해설의 이유와 같은지 비교해 보세요. 다르다면 이유 칸을 고쳐 써도 돼요.</p>'
+      : '<p class="ask"><b>다시 생각해 보기</b> ' + PATTERN[opt.tag].ask(state.cond) + '</p>';
+    const fb = $('fb' + i);
+    fb.innerHTML = h;
+    fb.hidden = false;
+
+    const fs = $('q' + i);
+    fs.querySelectorAll('input[type=radio]').forEach(r => { r.disabled = true; });
+    fs.querySelectorAll('.opt')[keyPos].classList.add('is-key');
+    fs.querySelector('[data-check]').hidden = true;
+  }
+
+  function renderSummary(){
+    const all = state.checked.every(Boolean);
+    const box = $('summary');
+    box.hidden = !all;
+    if (!all) return;
+    const { qs } = model();
+    const disp = displayed(qs);
+    const rows = disp.map((d, i) => {
+      const same = d[state.picks[i]].correct;
+      return '<span class="tag ' + (same ? 'tag-same' : 'tag-diff') + '">' + (i + 1) + '번 ' + SHORT[i] + ' · ' + (same ? '같음' : '다름') + '</span>';
+    }).join(' ');
+    box.innerHTML =
+      '<p><b>세 문항을 모두 확인했어요.</b></p><p>' + rows + '</p>' +
+      '<p class="note">이 결과는 오늘 이 조건에서 고른 답일 뿐, 실력을 정하는 점수가 아니에요. 다른 답을 고른 문항은 해설을 읽고 이유를 고쳐 써 보세요. 같은 답이어도 이유가 다를 수 있어요.</p>';
+  }
+
+  function renderSteps(){
+    const any = state.picks.some(p => p !== null);
+    const all = state.checked.every(Boolean);
+    $('st1').classList.toggle('is-on', !any);
+    $('st2').classList.toggle('is-on', any && !all);
+    $('st3').classList.toggle('is-on', all);
+  }
+
+  /* ---------- 교사: 응답 수 ---------- */
+  function renderTally(){
+    const { qs } = model();
+    const disp = displayed(qs);
+    const all = state.checked.every(Boolean);
+    $('tally').innerHTML = disp.map((d, i) => {
+      const total = state.counts[i].reduce((s, n) => s + n, 0);
+      return '<div class="tq" role="group" aria-label="' + (i + 1) + '번 ' + SHORT[i] + ' 응답 수">' +
+        '<div class="tq-head"><span>' + (i + 1) + '번 ' + SHORT[i] + '</span><span>합계 ' + total + '</span></div>' +
+        d.map((o, j) =>
+          '<div class="trow"><span class="ol" aria-hidden="true">' + LET[j] + '</span>' +
+          '<span class="lab">' + esc(o.label) + (all ? (o.correct ? '<small class="key">해설의 답</small>' : '<small>' + esc(PATTERN[o.tag].name) + '</small>') : '') + '</span>' +
+          '<span class="cnt"><button type="button" data-cnt="' + i + ',' + j + '" data-d="-1" aria-label="' + (i + 1) + '번 ' + LET[j] + ' 1 줄이기">−</button>' +
+          '<input type="number" inputmode="numeric" min="0" max="99" value="' + state.counts[i][j] + '" data-cin="' + i + ',' + j + '" aria-label="' + (i + 1) + '번 ' + LET[j] + '(' + esc(o.label) + ') 응답 수">' +
+          '<button type="button" data-cnt="' + i + ',' + j + '" data-d="1" aria-label="' + (i + 1) + '번 ' + LET[j] + ' 1 늘리기">+</button></span></div>'
+        ).join('') + '</div>';
+    }).join('');
+  }
+
+  function tagCounts(){
+    const { qs } = model();
+    const disp = displayed(qs);
+    const t = {};
+    LESSON.forEach(l => { t[l.tag] = 0; });
+    disp.forEach((d, i) => d.forEach((o, j) => {
+      t[o.correct ? 'confirm' : o.tag] += state.counts[i][j];
+    }));
+    return t;
+  }
+
+  function renderTeacher(){
+    const all = state.checked.every(Boolean);
+    $('teacherLocked').hidden = all;
+    $('teacherPanel').hidden = !all;
+    if (!all) return;
+    const { an, qs } = model();
+    const disp = displayed(qs);
+
+    // 선택지별 생각 패턴
+    $('patterns').innerHTML = disp.map((d, i) => {
+      const total = state.counts[i].reduce((s, n) => s + n, 0);
+      return '<div class="scroll-x"><table class="pat"><caption>' + (i + 1) + '번 ' + SHORT[i] + '</caption>' +
+        '<thead><tr><th scope="col">선택지</th><th scope="col">생각 패턴 · 물어볼 질문</th><th scope="col" style="text-align:right">응답</th></tr></thead><tbody>' +
+        d.map((o, j) => '<tr><td class="v">' + LET[j] + '. ' + esc(o.label) + '</td><td>' +
+          (o.correct ? '<span class="key">해설의 답</span> — 같은 답이어도 이유를 들어 보세요.' : esc(PATTERN[o.tag].name) + '<br><small style="color:var(--ink-soft)">' + PATTERN[o.tag].ask(state.cond) + '</small>') +
+          '</td><td class="n">' + state.counts[i][j] + (total ? ' (' + Math.round(state.counts[i][j] / total * 100) + '%)' : '') + '</td></tr>').join('') +
+        '</tbody></table></div>';
+    }).join('');
+
+    // 붙여넣은 이유
+    const pr = state.pasted;
+    $('reasonWrap').hidden = !(pr && pr.reasons.some(r => r.length));
+    if (pr){
+      $('pastedReasons').innerHTML = pr.reasons.map((list, i) => list.length
+        ? '<p style="margin:8px 0 4px;font-weight:600;font-size:14px">' + (i + 1) + '번 ' + SHORT[i] + '</p><ul class="reasons">' +
+          list.map(r => '<li><span class="ol">' + (r.j === null ? '?' : LET[r.j] + '. ' + esc(disp[i][r.j].label)) + '</span>' + esc(r.text) + '</li>').join('') + '</ul>'
+        : '').join('');
+    }
+
+    renderPicks();
+    renderVerify(an);
+  }
+
+  function renderPicks(){
+    const t = tagCounts();
+    const ranked = LESSON.slice().sort((u, v) => t[v.tag] - t[u.tag]);
+    const list = (kind, name, el) => {
+      el.innerHTML = ranked.map(l => {
+        const it = l[kind];
+        const n = t[l.tag];
+        const badge = l.tag === 'confirm' ? '해설과 같은 답 ' + n : '관련 응답 ' + n;
+        return '<label class="pick"><input type="radio" name="' + name + '" value="' + l.tag + '"' + (state.planPick[kind] === l.tag ? ' checked' : '') + '>' +
+          '<span><b>' + esc(it.title) + '<em class="' + (n ? '' : 'zero') + '">' + badge + '</em></b>' + esc(it.body) + '</span></label>';
+      }).join('');
+    };
+    list('exp', 'expPick', $('expList'));
+    list('act', 'actPick', $('actList'));
+    updatePlanBtn();
+  }
+  function updatePlanBtn(){
+    const ok = !!(state.planPick.exp || state.planPick.act);
+    $('savePlanBtn').disabled = !ok;
+    $('planHint').textContent = ok ? '' : '오늘의 설명이나 활동을 하나 이상 고르면 저장할 수 있어요.';
+  }
+
+  function verifyHTML(c, an){
+    const ints = [];
+    for (let x = c.p; x <= c.q; x++) ints.push(x);
+    const cls = y => (y === an.m ? ' class="is-min"' : y === an.M ? ' class="is-max"' : '');
+    return '<p style="margin:0 0 4px">꼭짓점 <span class="m">(' + num(c.h) + ', ' + num(c.k) + ')</span> · <span class="m">x = ' + num(c.h) + '</span>의 위치: <b>' + PLACE[an.place] + '</b></p>' +
+      '<p style="margin:0">후보 대입</p><ul class="vlist">' + an.vals.map(v => '<li>' + calcLine(c, v.x) + '</li>').join('') + '</ul>' +
+      '<p style="margin:0">최솟값 <b class="m">' + num(an.m) + '</b> (x = ' + an.minXs.map(num).join(', ') + ') · 최댓값 <b class="m">' + num(an.M) + '</b> (x = ' + an.maxXs.map(num).join(', ') + ')</p>' +
+      '<p style="margin:8px 0 0">구간 안 정수 <i>x</i>를 모두 대입해 다시 확인</p>' +
+      '<div class="scroll-x"><table class="itable"><tr><th scope="row"><i>x</i></th>' + ints.map(x => '<td>' + num(x) + '</td>').join('') + '</tr>' +
+      '<tr><th scope="row"><i>f</i>(<i>x</i>)</th>' + ints.map(x => '<td' + cls(f(c, x)) + '>' + num(f(c, x)) + '</td>').join('') + '</tr></table></div>';
+  }
+  function renderVerify(an){ $('verifyBody').innerHTML = verifyHTML(state.cond, an); }
+
+  let verifyCache = null;
+  function verifyAllText(){
+    if (!verifyCache) verifyCache = verifyAll();
+    const r = verifyCache;
+    return r.bad.length
+      ? '검산에서 ' + r.bad.length + '건이 맞지 않아요: ' + r.bad.slice(0, 3).map(b => eqText(b.c) + ', ' + ivText(b.c) + ' — ' + b.why).join(' / ')
+      : '가능한 조건 ' + r.total.toLocaleString() + '개(a 1~3, h·k −3~3, 양 끝 −4~4) 모두에서 후보 비교 결과가 3,361점 직접 대입 결과와 같고, 세 문항의 선택지가 서로 다르며 해설의 답이 하나씩이에요. (꼭짓점 구간 안 ' + r.place.in + ' · 경계 ' + r.place.edge + ' · 밖 ' + r.place.out + ')';
+  }
+
+  /* ---------- 붙여넣은 응답 읽기 ---------- */
+  function parsePasted(text){
+    const { qs } = model();
+    const code = currentCode(qs);
+    const blocks = text.split(/(?=\[6주차 미니 진단\])/).map(b => b.trim()).filter(Boolean);
+    const counts = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    const reasons = [[], [], []];
+    let used = 0, other = 0, broken = 0;
+    blocks.forEach(b => {
+      const cm = b.match(/코드\s*[:：]\s*([0-9A-Z]{5})/);
+      if (cm && cm[1] !== code){ other++; return; }
+      const am = b.match(/응답\s*[:：]([^\n]*)/);
+      if (!am){ broken++; return; }
+      const picks = [null, null, null];
+      for (const mm of am[1].matchAll(/([123])\s*번?\s*[:=]?\s*([가나다])/g)) picks[Number(mm[1]) - 1] = LET.indexOf(mm[2]);
+      if (picks.every(p => p === null)){ broken++; return; }
+      used++;
+      picks.forEach((p, i) => { if (p !== null) counts[i][p]++; });
+      for (const rm of b.matchAll(/이유\s*([123])\s*[:：]([^\n]*)/g)){
+        const t = rm[2].trim();
+        if (t) reasons[Number(rm[1]) - 1].push({ j: picks[Number(rm[1]) - 1], text: t.slice(0, 200) });
+      }
+    });
+    return { counts, reasons, used, other, broken };
+  }
+
+  /* ---------- 수업 계획 ---------- */
+  function stamp(d){
+    const z = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '. ' + (d.getMonth() + 1) + '. ' + d.getDate() + '. ' + z(d.getHours()) + ':' + z(d.getMinutes());
+  }
+  function countsLine(p){
+    return p.counts.map((r, i) => (i + 1) + '번 ' + r.map((n, j) => LET[j] + ' ' + n).join(' · ')).join(' / ');
+  }
+  function renderPlans(){
+    const ol = $('plans');
+    $('planBtns').hidden = !state.plans.length;
+    if (!state.plans.length){
+      ol.innerHTML = '<li style="border:0;padding:0"><p class="empty">아직 저장한 계획이 없어요. 세 문항을 확인하고 오늘의 설명·활동을 골라 저장하면, 다음 수업에서 같은 진단을 다시 불러올 수 있어요.</p></li>';
+      return;
+    }
+    ol.innerHTML = '';
+    state.plans.slice().reverse().forEach(p => {
+      const li = document.createElement('li');
+      li.innerHTML =
+        '<div class="head"><span class="m">' + eqHTML(p.cond) + ', ' + ivHTML(p.cond) + '</span><b>' + esc(p.at) + '</b></div>' +
+        '<p><span class="k">응답 수</span>' + esc(countsLine(p)) + '</p>' +
+        (p.exp ? '<p><span class="k">설명</span>' + esc(LESSON_BY[p.exp].exp.title) + '</p>' : '') +
+        (p.act ? '<p><span class="k">활동</span>' + esc(LESSON_BY[p.act].act.title) + '</p>' : '') +
+        (p.memo ? '<p class="memo"></p>' : '') +
+        '<div class="btn-row tight"><button type="button" class="btn btn-ghost btn-small" data-plan-load="' + p.id + '">이 진단 다시 쓰기</button>' +
+        '<button type="button" class="btn btn-ghost btn-small" data-plan-del="' + p.id + '">삭제</button></div>';
+      if (p.memo) li.querySelector('.memo').textContent = p.memo;
+      ol.appendChild(li);
+    });
+  }
+  function plansText(){
+    return state.plans.map(p => [
+      '[' + p.at + '] ' + eqText(p.cond) + ', ' + ivText(p.cond),
+      '  도입 질문: ' + p.intro,
+      '  응답 수: ' + countsLine(p),
+      '  설명: ' + (p.exp ? LESSON_BY[p.exp].exp.title : '-'),
+      '  활동: ' + (p.act ? LESSON_BY[p.act].act.title : '-'),
+      '  메모: ' + (p.memo || '-')
+    ].join('\n')).join('\n\n');
+  }
+
+  /* ---------- 학생용·교사용 HTML ---------- */
+  const BASE_CSS =
+    '*{box-sizing:border-box}body{margin:0;background:#F4F4FB;color:#1D1C33;font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:16px;line-height:1.6}' +
+    '.app{max-width:640px;margin:0 auto;padding:12px 16px 40px}.m{font-family:"Cambria Math","STIX Two Math","Times New Roman",serif;white-space:nowrap}' +
+    '.top{background:linear-gradient(120deg,#3A55C7,#6C48B8);color:#fff;border-radius:20px;padding:18px 20px;margin-bottom:14px}.top h1{margin:4px 0;font-size:24px}.top p{margin:0;font-size:14px}' +
+    '.card{background:#fff;border:1px solid #E4E2F1;border-radius:18px;padding:18px;margin-bottom:14px}h2{font-size:17px;margin:0 0 8px}' +
+    'svg{display:block;width:100%;height:auto;border:1px solid #E4E2F1;border-radius:12px}';
+
+  function studentHTML(){
+    const c = state.cond;
+    const { qs } = model();
+    const disp = displayed(qs);
+    const code = currentCode(qs);
+    const graph = graphSVG(c, { cand:false, min:false, max:false });
+    const SCRIPT_END = '<' + '/script>';
+    const qHTML = disp.map((d, i) =>
+      '<fieldset class="q"><legend><b>' + (i + 1) + '.</b> ' + STEMS[i] + '</legend><div class="opts">' +
+      d.map((o, j) => '<label class="opt"><input type="radio" name="q' + i + '" value="' + j + '"><span><b>' + LET[j] + '</b> ' + esc(o.label) + '</span></label>').join('') +
+      '</div><label class="lab" for="r' + i + '">고른 이유</label><textarea id="r' + i + '" rows="2" maxlength="200"></textarea></fieldset>'
+    ).join('');
+    return '<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+      '<meta name="referrer" content="no-referrer">\n<title>3문항 미니 진단 — 학생용</title>\n<style>' + BASE_CSS +
+      'i{font-family:"Cambria Math","Times New Roman",serif}sup{font-size:.68em;line-height:0}' +
+      '.intro{padding:12px 14px;border-radius:14px;background:#EFE8FA;color:#5B3E9E;font-size:17px;white-space:pre-wrap;margin:0 0 12px}' +
+      '.nick{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px}.nick input{flex:1 1 160px;max-width:220px}' +
+      'input[type=text],textarea{width:100%;font:inherit;padding:9px 11px;border:2px solid #E4E2F1;border-radius:12px}textarea{resize:vertical}' +
+      'input[type=text]:focus,textarea:focus{outline:none;border-color:#6C48B8}' +
+      '.q{border:1px solid #E4E2F1;border-radius:16px;padding:12px 14px;margin:14px 0 0}.q legend{font-weight:600;padding:0 4px}' +
+      '.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 8px}@media(max-width:520px){.opts{grid-template-columns:1fr}}' +
+      '.opt{position:relative}.opt input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}' +
+      '.opt span{display:flex;gap:8px;align-items:center;min-height:50px;padding:8px 12px;border:2px solid #E4E2F1;border-radius:12px;font-family:"Cambria Math","Times New Roman",serif;font-size:18px}' +
+      '.opt span b{font-family:inherit;font-size:13px;color:#514E72}.opt input:checked+span{border-color:#6C48B8;background:#EFE8FA;color:#5B3E9E;font-weight:700}' +
+      '.opt input:focus-visible+span{outline:3px solid #6C48B8;outline-offset:2px}.lab{display:block;font-weight:600;font-size:14.5px;margin:4px 0}' +
+      '.btn{min-height:48px;padding:10px 18px;border-radius:14px;border:0;background:#33499E;color:#fff;font:inherit;font-weight:600;cursor:pointer;width:100%;margin-top:14px}' +
+      '.out{margin-top:10px}.out textarea{font-family:ui-monospace,Consolas,monospace;font-size:13px;min-height:130px}.hint{font-size:14px;color:#514E72;margin:6px 0 0}' +
+      ':focus-visible{outline:3px solid #6C48B8;outline-offset:2px}</style>\n</head>\n<body>\n<div class="app">\n' +
+      '<header class="top"><p>공통수학1 · 제한된 구간에서 이차함수의 최대·최소</p><h1>3문항 미니 진단</h1><p>풀기 전에 생각을 먼저 골라요. 점수는 매기지 않아요.</p></header>\n' +
+      '<main class="card">\n<div class="nick"><label for="nick"><b>별명</b></label><input type="text" id="nick" maxlength="12" placeholder="[내 별명]" autocomplete="off"></div>\n' +
+      '<p class="hint" style="margin:-6px 0 12px">실제 이름·연락처는 쓰지 마세요. 이 파일은 아무것도 저장하거나 보내지 않아요.</p>\n' +
+      '<p class="intro">' + esc(state.intro) + '</p>\n' +
+      '<p>구간 <b class="m">' + ivHTML(c) + '</b>에서 함수 <b class="m">' + eqHTML(c) + '</b>에 대해 생각해요.</p>\n' + graph + '\n' + qHTML + '\n' +
+      '<button type="button" class="btn" id="copyBtn">선생님께 보낼 응답 복사하기</button>\n' +
+      '<div class="out" id="out" hidden><p class="hint" id="outMsg"></p><textarea id="outTa" readonly aria-label="보낼 응답"></textarea></div>\n' +
+      '</main>\n<p class="hint" style="text-align:center">응답 코드 ' + code + ' · 만든 사람: sunsky</p>\n</div>\n' +
+      '<script>\n(function(){\n' +
+      '  var CODE = ' + JSON.stringify(code) + ';\n' +
+      '  var LET = ["가", "나", "다"];\n' +
+      '  function val(n){ var r = document.querySelector("input[name=\\"" + n + "\\"]:checked"); return r ? LET[Number(r.value)] : "?"; }\n' +
+      '  function text(){\n' +
+      '    var nick = document.getElementById("nick").value.trim() || "[내 별명]";\n' +
+      '    var lines = ["[6주차 미니 진단] 코드: " + CODE, "별명: " + nick, "응답: 1" + val("q0") + " 2" + val("q1") + " 3" + val("q2")];\n' +
+      '    for (var i = 0; i < 3; i++) lines.push("이유" + (i + 1) + ": " + document.getElementById("r" + i).value.replace(/\\s+/g, " ").trim());\n' +
+      '    return lines.join("\\n");\n' +
+      '  }\n' +
+      '  function show(msg, t){ var ta = document.getElementById("outTa"); ta.value = t; document.getElementById("outMsg").textContent = msg; document.getElementById("out").hidden = false; return ta; }\n' +
+      '  document.getElementById("copyBtn").addEventListener("click", function(){\n' +
+      '    var t = text();\n' +
+      '    var fallback = function(){\n' +
+      '      var ta = show("", t); ta.focus(); ta.select();\n' +
+      '      var ok = false; try { ok = document.execCommand("copy"); } catch (e) {}\n' +
+      '      document.getElementById("outMsg").textContent = ok ? "복사했어요. 선생님이 알려 준 곳에 붙여 넣으세요." : "자동 복사가 안 됐어요. 아래 칸을 길게 누르거나 Ctrl+C로 직접 복사하세요.";\n' +
+      '    };\n' +
+      '    if (navigator.clipboard && navigator.clipboard.writeText){\n' +
+      '      navigator.clipboard.writeText(t).then(function(){ show("복사했어요. 선생님이 알려 준 곳에 붙여 넣으세요. (아래 칸에서 직접 복사해도 돼요)", t); }, fallback);\n' +
+      '    } else fallback();\n' +
+      '  });\n' +
+      '})();\n' + SCRIPT_END + '\n</body>\n</html>\n';
+  }
+
+  function teacherHTML(){
+    const c = state.cond;
+    const { an, qs } = model();
+    const disp = displayed(qs);
+    const code = currentCode(qs);
+    const t = tagCounts();
+    const memo = $('memo').value.trim();
+    const exp = state.planPick.exp ? LESSON_BY[state.planPick.exp].exp : null;
+    const act = state.planPick.act ? LESSON_BY[state.planPick.act].act : null;
+    const anyCount = state.counts.some(r => r.some(n => n));
+    const ranked = LESSON.slice().filter(l => t[l.tag]).sort((u, v) => t[v.tag] - t[u.tag]);
+    const qBlocks = disp.map((d, i) => {
+      const total = state.counts[i].reduce((s, n) => s + n, 0);
+      return '<h3>' + (i + 1) + '. ' + STEMS[i] + '</h3><table><thead><tr><th>선택지</th><th>생각 패턴 · 물어볼 질문</th><th>응답</th></tr></thead><tbody>' +
+        d.map((o, j) => '<tr' + (o.correct ? ' class="key"' : '') + '><td class="m">' + LET[j] + '. ' + esc(o.label) + '</td><td>' +
+          (o.correct ? '<b>해설의 답</b> — 같은 답이어도 이유를 들어 보세요.' : esc(PATTERN[o.tag].name) + '<br><small>' + PATTERN[o.tag].ask(c) + '</small>') +
+          '</td><td style="text-align:right">' + state.counts[i][j] + (total ? ' (' + Math.round(state.counts[i][j] / total * 100) + '%)' : '') + '</td></tr>').join('') +
+        '</tbody></table><div class="exp">' + explainBody(i, an) + '</div>';
+    }).join('');
+    return '<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+      '<meta name="referrer" content="no-referrer">\n<title>3문항 미니 진단 — 교사용</title>\n<style>' + BASE_CSS +
+      'i{font-family:"Cambria Math","Times New Roman",serif}sup{font-size:.68em;line-height:0}h3{font-size:15.5px;margin:16px 0 6px}' +
+      'table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid #E4E2F1;padding:6px 4px;text-align:left;vertical-align:top}th{font-size:12.5px;color:#514E72}' +
+      'tr.key td{background:#E9ECFB}small{color:#514E72}.exp{background:#F4F4FB;border-radius:10px;padding:8px 12px;margin-top:6px;font-size:14.5px}.exp p{margin:4px 0}' +
+      '.calc,.vlist{list-style:none;padding:0;margin:4px 0}.calc li,.vlist li{font-family:"Cambria Math","Times New Roman",serif}.is-min{color:#33499E;font-weight:700}.is-max{color:#5B3E9E;font-weight:700}' +
+      '.itable{width:auto;font-family:"Cambria Math","Times New Roman",serif}.itable th,.itable td{border:1px solid #E4E2F1;text-align:center;padding:3px 8px}.itable .is-min{background:#E9ECFB}.itable .is-max{background:#EFE8FA}' +
+      '.warn{background:#FBF0E1;color:#6E3F08;border-radius:12px;padding:10px 14px;font-size:14.5px}.memo{white-space:pre-wrap;background:#EFE8FA;border-radius:10px;padding:8px 12px}' +
+      '.print{min-height:44px;padding:8px 16px;border-radius:12px;border:2px solid #E4E2F1;background:#fff;color:#33499E;font:inherit;font-weight:600;cursor:pointer}' +
+      '@media print{body{background:#fff}.print{display:none}.card{border:0;padding:0}.top{color:#1D1C33;background:none;border-bottom:2px solid #1D1C33;border-radius:0}}' +
+      '</style>\n</head>\n<body>\n<div class="app">\n' +
+      '<header class="top"><p>교사용 · 공통수학1 [10공수1-02-06]</p><h1>3문항 미니 진단 — 검산과 수업 메모</h1><p>만든 날 ' + esc(stamp(new Date())) + ' · 응답 코드 ' + code + '</p></header>\n' +
+      '<section class="card"><h2>조건과 도입 질문</h2><p class="m" style="font-size:20px">' + eqHTML(c) + ', &nbsp;' + ivHTML(c) + '</p>' +
+      '<p style="white-space:pre-wrap">' + esc(state.intro) + '</p>' +
+      '<p class="warn">학생용 HTML에는 이 페이지의 정답·해설·교사 메모·응답 수가 들어 있지 않아요. 점수만으로 학생의 능력을 단정하지 말고, 학생이 쓴 이유와 함께 봐 주세요.</p></section>\n' +
+      '<section class="card"><h2>검산 (후보 직접 대입)</h2>' + verifyHTML(c, an) +
+      '<p style="font-size:14px;color:#514E72">' + esc(verifyAllText()) + '</p></section>\n' +
+      '<section class="card"><h2>문항별 해설과 생각 패턴</h2>' + qBlocks + '</section>\n' +
+      '<section class="card"><h2>오늘의 수업</h2>' +
+      (anyCount ? '<p><b>응답이 많이 모인 생각</b>: ' + ranked.slice(0, 3).map(l => esc(l.tag === 'confirm' ? '해설과 같은 답' : PATTERN[l.tag].name) + ' ' + t[l.tag]).join(' · ') + '</p>' : '<p>아직 입력한 응답 수가 없어요.</p>') +
+      '<p><b>설명</b>: ' + (exp ? esc(exp.title) + ' — ' + esc(exp.body) : '아직 고르지 않음') + '</p>' +
+      '<p><b>활동</b>: ' + (act ? esc(act.title) + ' — ' + esc(act.body) : '아직 고르지 않음') + '</p>' +
+      (memo ? '<p class="memo">' + esc(memo) + '</p>' : '') +
+      '<button type="button" class="print" onclick="window.print()">인쇄하기</button></section>\n' +
+      '<p style="text-align:center;font-size:13px;color:#514E72">만든 사람: sunsky · 외부 AI API 없이 계산했어요.</p>\n</div>\n</body>\n</html>\n';
+  }
+
+  /* ---------- 복사·내려받기 ---------- */
+  let toastTimer = 0;
+  function toast(msg){
+    const t = $('toast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 3400);
+  }
+  function showManual(text, msg){
+    $('manualMsg').textContent = msg || '자동 복사가 안 됐어요. 아래 내용을 직접 복사하세요. (PC: Ctrl+C · 모바일: 길게 눌러 \'복사\')';
+    const ta = $('manualTa');
+    ta.value = text;
+    $('manual').hidden = false;
+    ta.focus();
+    ta.select();
+  }
+  async function copyText(text, okMsg){
+    try {
+      if (!navigator.clipboard || !window.isSecureContext) throw new Error('no clipboard');
+      await navigator.clipboard.writeText(text);
+      toast(okMsg);
+      return;
+    } catch (e) { /* 아래 방법으로 */ }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) toast(okMsg); else showManual(text);
+  }
+  function download(name, html){
+    try {
+      const url = URL.createObjectURL(new Blob([html], { type:'text/html;charset=utf-8' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      toast(name + ' 내려받기를 시작했어요. 파일이 안 보이면 코드 복사를 써 주세요.');
+    } catch (e) {
+      showManual(html, '내려받기가 막혔어요. 아래 코드를 복사해 메모장에 붙여 넣고 .html로 저장하세요.');
+    }
+  }
+
+  /* ---------- 상태 바꾸기 ---------- */
+  // 조건이나 선택지 순서가 바뀌면 이전 선택·이유·확인 결과·응답 수는 맞지 않으므로 모두 지운다.
+  function resetResponses(){
+    state.picks = [null, null, null];
+    state.checked = [false, false, false];
+    state.counts = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    state.pasted = null;
+    state.planPick = { exp:null, act:null };
+    $('memo').value = '';
+    $('pasteHint').textContent = '';
+    renderQuestions();
+    renderAll();
+  }
+  function renderAll(){
+    renderCond();
+    renderIntro();
+    drawGraph();
+    renderSummary();
+    renderSteps();
+    renderTally();
+    renderTeacher();
+    renderPlans();
+    save();
+  }
+  function setCond(next, order, msg){
+    const had = state.picks.some(p => p !== null) || state.checked.some(Boolean) || state.counts.some(r => r.some(n => n)) ||
+      [0, 1, 2].some(i => $('r' + i) && $('r' + i).value.trim());
+    state.cond = next;
+    state.order = order || newOrder(state.order);
+    resetResponses();
+    $('condHint').textContent = msg || (had ? '조건이 바뀌어 선택·이유·확인 결과·응답 수를 지웠어요.' : '');
+  }
+
+  /* ---------- 이벤트 ---------- */
+  document.querySelectorAll('[data-cond]').forEach(b => {
+    b.addEventListener('click', () => {
+      const key = b.dataset.cond;
+      const next = Object.assign({}, state.cond, { [key]: state.cond[key] + Number(b.dataset.d) });
+      if (validCond(next)) setCond(next);
+    });
+  });
+  document.querySelectorAll('[data-preset]').forEach(b => {
+    b.addEventListener('click', () => setCond(Object.assign({}, PRESETS[Number(b.dataset.preset)])));
+  });
+  $('randBtn').addEventListener('click', () => {
+    const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+    let c;
+    do {
+      const p = ri(-4, 3);
+      c = { a: ri(1, 3), h: ri(-3, 3), k: ri(-3, 3), p, q: ri(p + 1, 4) };
+    } while (JSON.stringify(c) === JSON.stringify(state.cond));
+    setCond(c);
+  });
+  $('shuffleBtn').addEventListener('click', () => {
+    setCond(state.cond, newOrder(state.order), '선택지 순서를 새로 섞었어요. 선택·이유·확인 결과·응답 수도 지웠어요.');
+  });
+
+  $('introEditBtn').addEventListener('click', () => {
+    const open = $('introEdit').hidden;
+    $('introEdit').hidden = !open;
+    $('introEditBtn').setAttribute('aria-expanded', String(open));
+    if (open){ $('introIn').value = state.intro; $('introIn').focus(); }
+  });
+  $('introIn').addEventListener('input', () => {
+    const v = $('introIn').value;
+    state.intro = v.trim() ? v.slice(0, 240) : DEFAULT_INTRO;
+    renderIntro();
+    save();
+  });
+  $('introDone').addEventListener('click', () => {
+    $('introEdit').hidden = true;
+    $('introEditBtn').setAttribute('aria-expanded', 'false');
+    $('introEditBtn').focus();
+  });
+  $('introReset').addEventListener('click', () => {
+    state.intro = DEFAULT_INTRO;
+    $('introIn').value = DEFAULT_INTRO;
+    renderIntro();
+    save();
+  });
+
+  $('questions').addEventListener('change', e => {
+    const m = /^q(\d)$/.exec(e.target.name || '');
+    if (!m) return;
+    const i = Number(m[1]);
+    state.picks[i] = Number(e.target.value);
+    $('q' + i).querySelector('[data-check]').disabled = false;
+    renderSteps();
+  });
+  $('questions').addEventListener('click', e => {
+    const b = e.target.closest('[data-check]');
+    if (!b) return;
+    const i = Number(b.dataset.check);
+    if (state.picks[i] === null) return;
+    state.checked[i] = true;
+    renderFeedback(i);
+    drawGraph();
+    renderSummary();
+    renderSteps();
+    renderTally();
+    renderTeacher();
+    $('fb' + i).focus({ preventScroll:true });
+    $('fb' + i).scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'nearest' });
+  });
+
+  function setCount(i, j, n){
+    state.counts[i][j] = Math.max(0, Math.min(99, Number.isFinite(n) ? Math.round(n) : 0));
+    save();
+  }
+  $('tally').addEventListener('click', e => {
+    const b = e.target.closest('[data-cnt]');
+    if (!b) return;
+    const [i, j] = b.dataset.cnt.split(',').map(Number);
+    setCount(i, j, state.counts[i][j] + Number(b.dataset.d));
+    renderTally();
+    renderTeacher();
+    const btn = document.querySelector('[data-cnt="' + i + ',' + j + '"][data-d="' + b.dataset.d + '"]');
+    if (btn) btn.focus();
+  });
+  $('tally').addEventListener('change', e => {
+    const inp = e.target.closest('[data-cin]');
+    if (!inp) return;
+    const [i, j] = inp.dataset.cin.split(',').map(Number);
+    setCount(i, j, Number(inp.value));
+    renderTally();
+    renderTeacher();
+  });
+
+  $('pasteBtn').addEventListener('click', () => {
+    const r = parsePasted($('pasteIn').value);
+    if (!r.used){
+      $('pasteHint').textContent = '읽을 수 있는 응답이 없어요.' + (r.other ? ' 지금 조건과 코드가 다른 응답 ' + r.other + '개는 세지 않았어요.' : '') + ' 응답 수는 그대로 두었어요.';
+      return;
+    }
+    state.counts = r.counts;
+    state.pasted = { reasons: r.reasons };
+    $('pasteIn').value = '';   // 별명이 화면에 남지 않게 비운다
+    $('pasteHint').textContent = '응답 ' + r.used + '개로 응답 수를 바꿨어요.' +
+      (r.other ? ' 지금 조건과 코드가 다른 응답 ' + r.other + '개는 뺐어요.' : '') +
+      (r.broken ? ' 읽을 수 없는 묶음 ' + r.broken + '개는 뺐어요.' : '');
+    save();
+    renderTally();
+    renderTeacher();
+  });
+
+  ['expList', 'actList'].forEach(id => {
+    $(id).addEventListener('change', e => {
+      if (e.target.name === 'expPick') state.planPick.exp = e.target.value;
+      if (e.target.name === 'actPick') state.planPick.act = e.target.value;
+      updatePlanBtn();
+    });
+  });
+
+  $('savePlanBtn').addEventListener('click', () => {
+    if (!state.planPick.exp && !state.planPick.act) return;
+    state.plans.push({
+      id: Date.now(),
+      at: stamp(new Date()),
+      cond: Object.assign({}, state.cond),
+      order: state.order.map(p => p.slice()),
+      intro: state.intro,
+      counts: state.counts.map(r => r.slice()),
+      exp: state.planPick.exp,
+      act: state.planPick.act,
+      memo: $('memo').value.trim().slice(0, 500)
+    });
+    if (state.plans.length > 30) state.plans = state.plans.slice(-30);
+    save();
+    renderPlans();
+    toast('수업 계획을 이 브라우저에 저장했어요. 다음 수업에서 "이 진단 다시 쓰기"로 불러올 수 있어요.');
+  });
+
+  $('plans').addEventListener('click', e => {
+    const lb = e.target.closest('[data-plan-load]');
+    const db = e.target.closest('[data-plan-del]');
+    if (lb){
+      const p = state.plans.find(x => String(x.id) === lb.dataset.planLoad);
+      if (!p) return;
+      state.intro = p.intro || DEFAULT_INTRO;
+      setCond(Object.assign({}, p.cond), p.order.map(o => o.slice()), '저장한 진단(' + p.at + ')을 불러왔어요. 같은 조건·선택지 순서로 새로 시작해요. 응답 수는 0부터 다시 세요.');
+      $('cardIntro').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start' });
+    }
+    if (db){
+      if (!confirm('이 수업 계획을 지울까요?')) return;
+      state.plans = state.plans.filter(x => String(x.id) !== db.dataset.planDel);
+      save();
+      renderPlans();
+    }
+  });
+  $('copyPlansBtn').addEventListener('click', () => copyText(plansText(), '저장한 계획을 복사했어요.'));
+
+  $('verifyAllBtn').addEventListener('click', () => { $('verifyAllOut').textContent = verifyAllText(); });
+
+  $('dlStudent').addEventListener('click', () => download('6주차_미니진단_학생용.html', studentHTML()));
+  $('cpStudent').addEventListener('click', () => copyText(studentHTML(), '학생용 HTML 코드를 복사했어요.'));
+  $('dlTeacher').addEventListener('click', () => download('6주차_미니진단_교사용.html', teacherHTML()));
+  $('cpTeacher').addEventListener('click', () => copyText(teacherHTML(), '교사용 HTML 코드를 복사했어요.'));
+
+  $('manualSelect').addEventListener('click', () => { $('manualTa').focus(); $('manualTa').select(); });
+  $('manualClose').addEventListener('click', () => { $('manual').hidden = true; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('manual').hidden) $('manual').hidden = true; });
+
+  /* ---------- 시작 ---------- */
+  load();
+  if (!state.order) state.order = newOrder(null);
+  renderQuestions();
+  renderAll();
+
+  // 검산 스크립트·디버깅용(학생용 HTML에는 들어가지 않는다)
+  window.__week6 = { analyze, buildQuestions, calcLine, verifyAll, studentHTML, teacherHTML, state };
+})();
+</script>
+</body>
+</html>
