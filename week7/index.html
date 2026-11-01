@@ -130,7 +130,6 @@
     overflow-x:auto;
     white-space:nowrap;
   }
-  .eq small{ display:block; font-size:16px; color:var(--ink-soft); margin-top:2px; }
 
   /* condition steppers */
   .params{ display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:10px; margin:0 0 12px; }
@@ -168,7 +167,6 @@
     font-size:15px; text-align:center;
   }
   .seg .sym{ font-family:var(--font-math); font-size:24px; font-weight:700; }
-  .seg .sym-sub{ font-size:12px; color:var(--ink-soft); }
   .seg input:checked + span{ border-color:var(--violet-fill); background:var(--violet-soft); color:var(--violet); font-weight:600; }
   .seg input:focus-visible + span{ outline:3px solid var(--violet-fill); outline-offset:2px; }
 
@@ -345,10 +343,10 @@
       <fieldset class="seg" id="opSeg">
         <legend>부등호 <small>(방향키로도 바꿀 수 있어요)</small></legend>
         <div class="seg-row">
-          <label><input type="radio" name="op" value="lt"><span><span class="sym">&lt;</span><span class="sym-sub">작다</span></span></label>
-          <label><input type="radio" name="op" value="le"><span><span class="sym">≤</span><span class="sym-sub">작거나 같다</span></span></label>
-          <label><input type="radio" name="op" value="gt"><span><span class="sym">&gt;</span><span class="sym-sub">크다</span></span></label>
-          <label><input type="radio" name="op" value="ge"><span><span class="sym">≥</span><span class="sym-sub">크거나 같다</span></span></label>
+          <label><input type="radio" name="op" value="lt" aria-label="작다"><span><span class="sym">&lt;</span></span></label>
+          <label><input type="radio" name="op" value="le" aria-label="작거나 같다"><span><span class="sym">≤</span></span></label>
+          <label><input type="radio" name="op" value="gt" aria-label="크다"><span><span class="sym">&gt;</span></span></label>
+          <label><input type="radio" name="op" value="ge" aria-label="크거나 같다"><span><span class="sym">≥</span></span></label>
         </div>
       </fieldset>
 
@@ -841,8 +839,7 @@
   /* ---------- 그리기 ---------- */
   function renderCond(){
     const c = state.cond;
-    $('eqText').innerHTML = M('f(x) = ' + factorStr(c, true)) +
-      '<small>문제 식: ' + M(ineqStr(c, state.form, true)) + '</small>';
+    $('eqText').innerHTML = M(ineqStr(c, state.form, true));
     $('out-a').textContent = num(c.a);
     $('out-r').textContent = num(c.r);
     $('out-s').textContent = num(c.s);
