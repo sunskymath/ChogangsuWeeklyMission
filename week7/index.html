@@ -20,6 +20,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- 수식 글꼴(KaTeX). 못 불러와도 기본 수식 글꼴로 그대로 동작한다. -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer id="katexJs" src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <style>
   :root{
     --ink:#1D1C33;
@@ -111,7 +114,8 @@
   .card h3{ font-size:16px; font-weight:600; margin:18px 0 8px; }
   .card .lead{ margin:0 0 14px; color:var(--ink-soft); font-size:14.5px; }
 
-  /* math */
+  /* math: KaTeX가 있으면 .katex, 못 불러오면 .m 으로 보인다 */
+  .katex{ font-size:1.1em; }
   .m{ font-family:var(--font-math); white-space:nowrap; }
   i{ font-family:var(--font-math); font-style:italic; }
   sup{ font-size:.68em; line-height:0; }
@@ -129,10 +133,9 @@
   .eq small{ display:block; font-size:16px; color:var(--ink-soft); margin-top:2px; }
 
   /* condition steppers */
-  .params{ display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:10px; margin:0 0 12px; }
-  .param{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 6px 6px 12px; border:1px solid var(--line); border-radius:14px; }
-  .param .pl{ font-size:15px; font-weight:600; }
-  .param .pl small{ display:block; white-space:nowrap; font-size:12px; font-weight:400; color:var(--ink-soft); line-height:1.3; }
+  .params{ display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:10px; margin:0 0 12px; }
+  .param{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px; min-width:0; padding:6px 6px 6px 10px; border:1px solid var(--line); border-radius:14px; }
+  .param .pl{ font-size:15px; font-weight:600; white-space:nowrap; }
   .stepper{
     display:inline-flex; align-items:center;
     border:2px solid var(--line); border-radius:12px;
@@ -140,12 +143,12 @@
   }
   .stepper:focus-within{ border-color:var(--violet-fill); }
   .stepper button{
-    width:42px; height:44px; border:0; background:none;
+    width:36px; height:44px; border:0; background:none;
     color:var(--violet); font-size:22px; cursor:pointer;
   }
   .stepper button:disabled{ color:#C9C7DC; cursor:not-allowed; }
   .stepper output{
-    min-width:3ch; text-align:center;
+    min-width:2.4ch; text-align:center;
     font-family:var(--font-math); font-size:21px; font-weight:700;
     color:var(--violet);
   }
@@ -209,16 +212,17 @@
   }
   .problem{ margin:0 0 12px; font-size:16.5px; }
   .problem .m{ font-size:20px; }
-  .choices{ display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; border:0; margin:0; padding:0; }
+  .choices{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; border:0; margin:0; padding:0; min-width:0; }
+  .choice .katex{ white-space:normal; }
   .choice{ position:relative; }
   .choice input{ position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
-  .choice span{
+  .choice input + span{
     display:flex; align-items:center; gap:10px;
     min-height:54px; padding:8px 12px;
     border:2px solid var(--line); border-radius:12px;
     font-family:var(--font-math); font-size:19px;
   }
-  .choice span b{ font-family:var(--font-body); font-size:14px; color:var(--ink-soft); }
+  .choice input + span > b{ font-family:var(--font-body); font-size:14px; color:var(--ink-soft); }
   .choice input:checked + span{ border-color:var(--violet-fill); background:var(--violet-soft); color:var(--violet); font-weight:700; }
   .choice input:focus-visible + span{ outline:3px solid var(--violet-fill); outline-offset:2px; }
   .choice.is-key input + span{ border-color:var(--green); background:var(--green-soft); color:var(--green); }
@@ -287,7 +291,7 @@
   footer{ text-align:center; font-size:13px; color:var(--ink-soft); margin-top:20px; }
 
   @media (max-width:520px){
-    .choices{ grid-template-columns:1fr; }
+    .choices{ grid-template-columns:minmax(0, 1fr); }
     .seg-row{ grid-template-columns:repeat(2, 1fr); }
     .eq{ font-size:20px; }
   }
@@ -309,11 +313,11 @@
     <!-- ① 조건 -->
     <section class="card" id="cardCond" aria-labelledby="hCond">
       <h2 id="hCond"><span class="no">1</span>조건 정하기 <span class="who">교사</span></h2>
-      <p class="lead"><span class="m"><i>f</i>(<i>x</i>) = <i>a</i>(<i>x</i> − <i>r</i>)(<i>x</i> − <i>s</i>)</span>의 계수와 두 근, 부등호를 골라요. 조건을 바꾸면 고른 답과 열어 둔 해설은 처음으로 돌아가요.</p>
+      <p class="lead"><span data-tex="f(x) = a(x - r)(x - s)"><span class="m"><i>f</i>(<i>x</i>) = <i>a</i>(<i>x</i> − <i>r</i>)(<i>x</i> − <i>s</i>)</span></span>의 계수와 두 근, 부등호를 골라요. 계수 <span data-tex="a"><i>a</i></span>는 −3~3(0 빼고), 두 근은 −4~4의 서로 다른 정수예요(<span data-tex="r &lt; s"><i>r</i> &lt; <i>s</i></span>). 조건을 바꾸면 고른 답과 열어 둔 해설은 처음으로 돌아가요.</p>
       <div class="eq" id="eqText" aria-live="polite"></div>
       <div class="params">
         <div class="param" role="group" aria-labelledby="lbl-a">
-          <span class="pl" id="lbl-a">계수 <i>a</i><small>−3 ~ 3, 0 빼고</small></span>
+          <span class="pl" id="lbl-a">계수 <span data-tex="a"><i>a</i></span></span>
           <span class="stepper">
             <button type="button" data-cond="a" data-d="-1" aria-label="a 줄이기">−</button>
             <output id="out-a" aria-live="polite"></output>
@@ -321,7 +325,7 @@
           </span>
         </div>
         <div class="param" role="group" aria-labelledby="lbl-r">
-          <span class="pl" id="lbl-r">작은 근 <i>r</i><small>−4 ~ 3</small></span>
+          <span class="pl" id="lbl-r">작은 근 <span data-tex="r"><i>r</i></span></span>
           <span class="stepper">
             <button type="button" data-cond="r" data-d="-1" aria-label="작은 근 r 1 줄이기">−</button>
             <output id="out-r" aria-live="polite"></output>
@@ -329,7 +333,7 @@
           </span>
         </div>
         <div class="param" role="group" aria-labelledby="lbl-s">
-          <span class="pl" id="lbl-s">큰 근 <i>s</i><small>−3 ~ 4</small></span>
+          <span class="pl" id="lbl-s">큰 근 <span data-tex="s"><i>s</i></span></span>
           <span class="stepper">
             <button type="button" data-cond="s" data-d="-1" aria-label="큰 근 s 1 줄이기">−</button>
             <output id="out-s" aria-live="polite"></output>
@@ -413,7 +417,7 @@
 
       <details class="box" id="verifyBox">
         <summary>교사용 검산</summary>
-        <p class="hint" style="margin-top:0">모든 조건에서 정답과 수직선이, <i>x</i>를 −6부터 6까지 0.25씩 직접 넣어 본 결과와 같은지 확인해요.</p>
+        <p class="hint" style="margin-top:0">모든 조건에서 정답과 수직선이, <span data-tex="x"><i>x</i></span>를 −6부터 6까지 0.25씩 직접 넣어 본 결과와 같은지 확인해요.</p>
         <div class="btn-row tight">
           <button type="button" class="btn btn-ghost btn-small" id="verifyAllBtn">가능한 모든 조건 자동 검산</button>
         </div>
@@ -471,10 +475,10 @@
   const ROOT_MIN = -4, ROOT_MAX = 4;
   // want: 부등호가 원하는 f(x)의 부호, eq: 등호가 있는지
   const OPS = {
-    lt: { sym:'<', html:'&lt;', want:-1, eq:false },
-    le: { sym:'≤', html:'≤',    want:-1, eq:true },
-    gt: { sym:'>', html:'&gt;', want: 1, eq:false },
-    ge: { sym:'≥', html:'≥',    want: 1, eq:true }
+    lt: { sym:'<', tex:'<',   want:-1, eq:false },
+    le: { sym:'≤', tex:'\\le', want:-1, eq:true },
+    gt: { sym:'>', tex:'>',   want: 1, eq:false },
+    ge: { sym:'≥', tex:'\\ge', want: 1, eq:true }
   };
   const FLIP = { lt:'gt', le:'ge', gt:'lt', ge:'le' };
   // 선택지 순서는 늘 같다: ① 사이(등호 없음) ② 사이(등호 있음) ③ 바깥(등호 없음) ④ 바깥(등호 있음)
@@ -574,53 +578,61 @@
     return { total, negA, bad };
   }
 
-  /* ---- 식 쓰기 (html: true면 HTML, false면 그냥 글) ---- */
-  const X = html => (html ? '<i>x</i>' : 'x');
-  function linear(r, html){
-    if (r === 0) return X(html);
-    return '(' + X(html) + (r > 0 ? ' − ' + r : ' + ' + (-r)) + ')';
+  /* ---- 식 쓰기 (tex: true면 LaTeX, false면 복사·읽기용 그냥 글) ---- */
+  // LaTeX에서는 음수를 {-2}처럼 묶는다. 그래야 MathML에서도 빼기가 아니라 음의 부호로 붙어 보인다.
+  const nm = (n, tex) => {
+    if (!tex) return num(n);
+    const v = Math.round(n * 10000) / 10000 || 0;
+    return v < 0 ? '{-' + Math.abs(v) + '}' : String(v);
+  };
+  const MI = tex => (tex ? ' - ' : ' − ');
+  const TIMES = tex => (tex ? ' \\times ' : ' × ');
+  function linear(r, tex){
+    if (r === 0) return 'x';
+    return '(x' + (r > 0 ? MI(tex) + r : ' + ' + (-r)) + ')';
   }
-  function coefPrefix(a){ return a === 1 ? '' : a === -1 ? MINUS : num(a); }
-  function factorStr(c, html){
+  function coefPrefix(a, tex){ return a === 1 ? '' : a === -1 ? (tex ? '{-}' : MINUS) : nm(a, tex); }
+  function factorStr(c, tex){
     // 근이 0이면 x를 앞에 쓴다: 2x(x − 3)
-    const fs = c.r === 0 ? [linear(c.r, html), linear(c.s, html)]
-      : c.s === 0 ? [linear(c.s, html), linear(c.r, html)]
-      : [linear(c.r, html), linear(c.s, html)];
-    return coefPrefix(c.a) + fs.join('');
+    const fs = c.r === 0 ? [linear(c.r, tex), linear(c.s, tex)]
+      : c.s === 0 ? [linear(c.s, tex), linear(c.r, tex)]
+      : [linear(c.r, tex), linear(c.s, tex)];
+    return coefPrefix(c.a, tex) + fs.join('');
   }
-  function polyStr(A, B, C, html){
-    const sq = html ? '<sup>2</sup>' : '²';
+  function polyStr(A, B, C, tex){
+    const sq = tex ? 'x^{2}' : 'x²';
     const parts = [];
-    [[A, X(html) + sq], [B, X(html)], [C, '']].forEach(([k, v]) => {
+    [[A, sq], [B, 'x'], [C, '']].forEach(([k, v]) => {
       if (k === 0) return;
       const abs = Math.abs(k);
       const body = (v && abs === 1) ? v : abs + v;
-      parts.push(parts.length ? (k < 0 ? ' − ' : ' + ') + body : (k < 0 ? MINUS : '') + body);
+      parts.push(parts.length ? (k < 0 ? MI(tex) : ' + ') + body : k < 0 ? (tex ? '{-' + body + '}' : MINUS + body) : body);
     });
     return parts.join('');
   }
   const expandCoefs = c => [c.a, -c.a * (c.r + c.s), c.a * c.r * c.s];
-  function expandStr(c, html){ const [A, B, C] = expandCoefs(c); return polyStr(A, B, C, html); }
-  function lhsStr(c, form, html){ return form === 'expand' ? expandStr(c, html) : factorStr(c, html); }
-  function ineqStr(c, form, html){
-    return lhsStr(c, form, html) + ' ' + (html ? OPS[c.op].html : OPS[c.op].sym) + ' 0';
+  function expandStr(c, tex){ const [A, B, C] = expandCoefs(c); return polyStr(A, B, C, tex); }
+  function lhsStr(c, form, tex){ return form === 'expand' ? expandStr(c, tex) : factorStr(c, tex); }
+  const opStr = (op, tex) => (tex ? OPS[op].tex : OPS[op].sym);
+  function ineqStr(c, form, tex){
+    return lhsStr(c, form, tex) + ' ' + opStr(c.op, tex) + ' 0';
   }
-  function choiceStr(c, k, html){
-    const ch = CHOICES[k], x = X(html);
-    const lt = html ? '&lt;' : '<', gt = html ? '&gt;' : '>';
-    const lo = ch.closed ? '≤' : lt, hi = ch.closed ? '≥' : gt;
-    if (ch.region === 'in') return num(c.r) + ' ' + lo + ' ' + x + ' ' + lo + ' ' + num(c.s);
-    return x + ' ' + lo + ' ' + num(c.r) + ' 또는 ' + x + ' ' + hi + ' ' + num(c.s);
+  function choiceStr(c, k, tex){
+    const ch = CHOICES[k];
+    const lo = ch.closed ? (tex ? '\\le' : '≤') : '<', hi = ch.closed ? (tex ? '\\ge' : '≥') : '>';
+    if (ch.region === 'in') return nm(c.r, tex) + ' ' + lo + ' x ' + lo + ' ' + nm(c.s, tex);
+    return 'x ' + lo + ' ' + nm(c.r, tex) + (tex ? ' \\text{ 또는 } ' : ' 또는 ') + 'x ' + hi + ' ' + nm(c.s, tex);
   }
   // f(−2) = −2 × (−2 + 1) × (−2 − 3) = −2 × (−1) × (−5) = −10
-  function calcStr(c, x){
-    const sub = r => (r === 0 ? (x < 0 ? '(' + num(x) + ')' : num(x)) : '(' + num(x) + (r > 0 ? ' − ' + r : ' + ' + (-r)) + ')');
-    const val = v => (v < 0 ? '(' + num(v) + ')' : num(v));
-    const aP = c.a === 1 ? '' : num(c.a) + ' × ';
+  function calcStr(c, x, tex){
+    const n = v => nm(v, tex);
+    const sub = r => (r === 0 ? (x < 0 ? '(' + n(x) + ')' : n(x)) : '(' + n(x) + (r > 0 ? MI(tex) + r : ' + ' + (-r)) + ')');
+    const val = v => (v < 0 ? '(' + n(v) + ')' : n(v));
+    const aP = c.a === 1 ? '' : n(c.a) + TIMES(tex);
     const rs = c.s === 0 ? [c.s, c.r] : [c.r, c.s];   // factorStr과 같은 순서로 쓴다
-    const first = aP + rs.map(sub).join(' × ');
-    const mid = aP + rs.map(r => val(x - r)).join(' × ');
-    return 'f(' + num(x) + ') = ' + first + (mid !== first ? ' = ' + mid : '') + ' = ' + num(f(c, x));
+    const first = aP + rs.map(sub).join(TIMES(tex));
+    const mid = aP + rs.map(r => val(x - r)).join(TIMES(tex));
+    return 'f(' + n(x) + ') = ' + first + (mid !== first ? ' = ' + mid : '') + ' = ' + n(f(c, x));
   }
   /* CORE-END */
 
@@ -670,8 +682,40 @@
   }
 
   const nick = () => state.nick.trim() || DEFAULT_NICK;
-  const ro = n => num(n) + (Math.abs(n) === 3 ? '으로' : '로');   // 계수는 ±1~±3뿐이다
-  const problemHTML = (c, form) => '이차부등식 <span class="m">' + ineqStr(c, form, true) + '</span> 의 해를 고르세요.';
+  const roJ = n => (Math.abs(n) === 3 ? '으로' : '로');   // 계수는 ±1~±3뿐이다
+
+  /* ---------- 수식: KaTeX가 있으면 LaTeX로 그리고, 못 불러오면 기본 글꼴로 보여 준다 ---------- */
+  // 화면 읽기 프로그램도 읽도록 MathML을 함께 넣는다. 내보낸 HTML을 만들 때만 'mathml'(KaTeX 글꼴·CSS 없이 브라우저가 직접 그린다)
+  let texOut = 'htmlAndMathml';
+  function texFallback(t){
+    const keep = [];
+    let s = t.replace(/\\text\{([^}]*)\}/g, (_, w) => { keep.push(w); return '\u0003' + (keep.length - 1) + '\u0003'; });
+    s = s.replace(/</g, '\u0001').replace(/>/g, '\u0002')
+      .replace(/\\le(?![a-z])/g, '≤').replace(/\\ge(?![a-z])/g, '≥').replace(/\\times(?![a-z])/g, '×')
+      .replace(/[a-z]/g, '<i>$&</i>')
+      .replace(/\^\{(\d+)\}/g, '<sup>$1</sup>')
+      .replace(/[{}]/g, '')
+      .replace(/-/g, MINUS)
+      .replace(/\u0001/g, '&lt;').replace(/\u0002/g, '&gt;');
+    return s.replace(/\u0003(\d+)\u0003/g, (_, i) => esc(keep[Number(i)]));
+  }
+  function M(t){
+    if (window.katex){
+      try { return window.katex.renderToString(t, { throwOnError:false, output:texOut }); } catch (e) { /* 아래 글꼴로 */ }
+    }
+    return '<span class="m">' + texFallback(t) + '</span>';
+  }
+  function withMathML(make){
+    texOut = 'mathml';
+    try { return make(); } finally { texOut = 'htmlAndMathml'; }
+  }
+  // 정적인 글의 수식(data-tex)도 KaTeX가 오면 바꿔 그린다
+  function renderStatic(){
+    if (!window.katex) return;
+    document.querySelectorAll('[data-tex]').forEach(el => { el.innerHTML = M(el.dataset.tex); });
+  }
+
+  const problemHTML = (c, form) => '이차부등식 ' + M(ineqStr(c, form, true)) + ' 의 해를 고르세요.';
   const problemText = (c, form) => '이차부등식 ' + ineqStr(c, form, false) + ' 의 해를 고르세요.';
 
   /* ---------- 수직선 (인라인 색이라 내보낸 HTML에서도 그대로 보인다) ---------- */
@@ -724,49 +768,51 @@
 
   /* ---------- 해설 ---------- */
   const PART_NAME = c => ({
-    left: '<span class="m"><i>x</i> &lt; ' + num(c.r) + '</span>',
-    mid: '<span class="m">' + num(c.r) + ' &lt; <i>x</i> &lt; ' + num(c.s) + '</span>',
-    right: '<span class="m"><i>x</i> &gt; ' + num(c.s) + '</span>'
+    left: M('x < ' + nm(c.r, true)),
+    mid: M(nm(c.r, true) + ' < x < ' + nm(c.s, true)),
+    right: M('x > ' + nm(c.s, true))
   });
   function factorSteps(c){
-    // 전개한 꼴 → 인수분해 과정. 좁은 화면에서는 '=' 자리에서 줄이 바뀐다.
+    // 전개한 꼴 → 인수분해 과정. 좁은 화면에서는 '=' 다음에서 줄이 바뀐다.
     const poly = expandStr(c, true), fac = factorStr(c, true);
     const inner = polyStr(1, -(c.r + c.s), c.r * c.s, true);
-    const pieces = c.a === 1 ? [poly, fac] : [poly, coefPrefix(c.a) + '(' + inner + ')', fac];
-    return pieces.map(p => '<span class="m">' + p + '</span>').join(' = ');
+    const pieces = c.a === 1 ? [poly, fac] : [poly, coefPrefix(c.a, true) + '(' + inner + ')', fac];
+    return pieces.map((p, i) => M(i < pieces.length - 1 ? p + ' =' : p)).join(' ');
   }
   function explainHTML(c, form){
     const sol = solve(c), op = OPS[c.op], pn = PART_NAME(c);
-    const fx = '<span class="m"><i>f</i>(<i>x</i>) = ' + factorStr(c, true) + '</span>';
+    const fx = M('f(x) = ' + factorStr(c, true));
     const rows = sol.tp.map(t =>
-      '<tr' + (t.ok ? ' class="yes"' : '') + '><td>' + pn[t.part] + '</td><td class="calc">' + esc(calcStr(c, t.x)) + '</td><td class="sg">' + (t.sg > 0 ? '+' : MINUS) + '</td></tr>').join('');
+      '<tr' + (t.ok ? ' class="yes"' : '') + '><td>' + pn[t.part] + '</td><td class="calc">' + M(calcStr(c, t.x, true)) + '</td><td class="sg">' + (t.sg > 0 ? '+' : MINUS) + '</td></tr>').join('');
     const okParts = sol.tp.filter(t => t.ok).map(t => pn[t.part]).join(', ');
+    const roots = '이 되는 ' + M('x') + '는 ' + M(nm(c.r, true)) + ', ' + M(nm(c.s, true)) + ' 두 개예요.';
     const step1 = form === 'expand'
-      ? '좌변을 인수분해해요. ' + factorSteps(c) + '. 그래서 ' + fx + '이고, <span class="m"><i>f</i>(<i>x</i>) = 0</span>이 되는 <i>x</i>는 <span class="m">' + num(c.r) + '</span>, <span class="m">' + num(c.s) + '</span> 두 개예요.'
-      : fx + '라고 두면, <span class="m"><i>f</i>(<i>x</i>) = 0</span>이 되는 <i>x</i>는 <span class="m">' + num(c.r) + '</span>, <span class="m">' + num(c.s) + '</span> 두 개예요.';
-    const ans = choiceStr(c, sol.key, true);
+      ? '좌변을 인수분해해요. ' + factorSteps(c) + '. 그래서 ' + fx + '이고, ' + M('f(x) = 0') + roots
+      : fx + '라고 두면, ' + M('f(x) = 0') + roots;
+    const ans = M(choiceStr(c, sol.key, true));
     // 계수로 나누어 보는 검산
     let check = '';
     const c1 = { a:1, r:c.r, s:c.s, op: c.a < 0 ? FLIP[c.op] : c.op };
     const same = solve(c1).key === sol.key;
-    const dividedIneq = '<span class="m">' + factorStr(c1, true) + ' ' + OPS[c1.op].html + ' 0</span>';
+    const dividedIneq = M(factorStr(c1, true) + ' ' + opStr(c1.op, true) + ' 0');
+    const aBy = M(nm(c.a, true)) + roJ(c.a);
     if (c.a < 0){
-      check = '<p class="check"><b>검산</b> 양변을 음수 <span class="m">' + ro(c.a) + '</span> 나누면 부등호 방향이 바뀌어서 ' + dividedIneq + '이 돼요. 이 식으로 풀어도 ' + (same ? '같은 답이 나와요.' : '<b>답이 달라요. 조건을 다시 확인하세요.</b>') + '</p>';
+      check = '<p class="check"><b>검산</b> 양변을 음수 ' + aBy + ' 나누면 부등호 방향이 바뀌어서 ' + dividedIneq + '이 돼요. 이 식으로 풀어도 ' + (same ? '같은 답이 나와요.' : '<b>답이 달라요. 조건을 다시 확인하세요.</b>') + '</p>';
     } else if (c.a !== 1){
-      check = '<p class="check"><b>검산</b> 양변을 양수 <span class="m">' + ro(c.a) + '</span> 나누면 부등호 방향은 그대로라서 ' + dividedIneq + '이 돼요. 이 식으로 풀어도 ' + (same ? '같은 답이 나와요.' : '<b>답이 달라요. 조건을 다시 확인하세요.</b>') + '</p>';
+      check = '<p class="check"><b>검산</b> 양변을 양수 ' + aBy + ' 나누면 부등호 방향은 그대로라서 ' + dividedIneq + '이 돼요. 이 식으로 풀어도 ' + (same ? '같은 답이 나와요.' : '<b>답이 달라요. 조건을 다시 확인하세요.</b>') + '</p>';
     }
     return '<ol class="ex-steps">' +
       '<li><span class="k">두 근 찾기</span><br>' + step1 + '</li>' +
       '<li><span class="k">값을 넣어 부호 보기</span><br>두 근으로 나뉜 세 구간에서 값을 하나씩 넣어 봐요.' +
         '<div class="scroll-x"><table class="signs"><thead><tr><th>구간</th><th>넣은 값</th><th>부호</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
         '<span style="font-size:14px;color:#514E72">' + (c.a < 0
-          ? '<i>a</i>가 음수라서 두 근 사이가 +, 바깥이 ' + MINUS + '예요. 그래프가 위로 볼록한 모양이에요.'
-          : '<i>a</i>가 양수라서 두 근 사이가 ' + MINUS + ', 바깥이 +예요. 그래프가 아래로 볼록한 모양이에요.') + '</span>' +
+          ? M('a') + '가 음수라서 두 근 사이가 +, 바깥이 ' + MINUS + '예요. 그래프가 위로 볼록한 모양이에요.'
+          : M('a') + '가 양수라서 두 근 사이가 ' + MINUS + ', 바깥이 +예요. 그래프가 아래로 볼록한 모양이에요.') + '</span>' +
       '</li>' +
-      '<li><span class="k">부등호 보기</span><br><span class="m"><i>f</i>(<i>x</i>) ' + op.html + ' 0</span>이니까 부호가 <b>' + (op.want > 0 ? '+' : MINUS) + '</b>인 곳을 골라요. → ' + okParts + '</li>' +
+      '<li><span class="k">부등호 보기</span><br>' + M('f(x) ' + opStr(c.op, true) + ' 0') + '이니까 부호가 <b>' + (op.want > 0 ? '+' : MINUS) + '</b>인 곳을 골라요. → ' + okParts + '</li>' +
       '<li><span class="k">등호 보기</span><br>' + (op.eq
-        ? '등호가 있어요. <span class="m"><i>f</i>(' + num(c.r) + ') = <i>f</i>(' + num(c.s) + ') = 0</span>이라서 두 근도 해에 넣어요. 수직선에는 <b>채운 점</b>.'
-        : '등호가 없어요. <span class="m"><i>f</i>(' + num(c.r) + ') = <i>f</i>(' + num(c.s) + ') = 0</span>인데, 0은 0보다 ' + (op.want < 0 ? '작지' : '크지') + ' 않아서 두 근은 빼요. 수직선에는 <b>빈 점</b>.') + '</li>' +
+        ? '등호가 있어요. ' + M('f(' + nm(c.r, true) + ') = f(' + nm(c.s, true) + ') = 0') + '이라서 두 근도 해에 넣어요. 수직선에는 <b>채운 점</b>.'
+        : '등호가 없어요. ' + M('f(' + nm(c.r, true) + ') = f(' + nm(c.s, true) + ') = 0') + '인데, 0은 0보다 ' + (op.want < 0 ? '작지' : '크지') + ' 않아서 두 근은 빼요. 수직선에는 <b>빈 점</b>.') + '</li>' +
       '<li><span class="k">답</span><br><span class="answer">' + ans + '</span> (' + MARK[sol.key] + ')</li>' +
       '</ol>' +
       lineSVG(c, false) + check;
@@ -779,24 +825,24 @@
     const regionWrong = ch.region !== sol.region, closedWrong = ch.closed !== sol.closed;
     if (regionWrong && closedWrong) return '부호와 등호를 모두 놓쳤어요. 값 넣기부터 같이 해 보세요.';
     if (closedWrong) return sol.closed
-      ? '범위는 맞았어요. 등호가 있으면 <i>f</i>(근) = 0도 해가 된다는 걸 확인하게 하세요.'
-      : '범위는 맞았어요. 등호가 없는데 두 근을 넣었어요. <i>f</i>(근) = 0을 직접 넣어 보게 하세요.';
+      ? '범위는 맞았어요. 등호가 있으면 ' + M('f(\\text{근}) = 0') + '도 해가 된다는 걸 확인하게 하세요.'
+      : '범위는 맞았어요. 등호가 없는데 두 근을 넣었어요. ' + M('f(\\text{근}) = 0') + '을 직접 넣어 보게 하세요.';
     return c.a < 0
-      ? '<i>a</i>가 음수인 걸 놓치고 \'작으면 사이, 크면 바깥\'만 썼을 수 있어요. 두 근 사이에 값을 하나 넣어 보게 하세요.'
+      ? M('a') + '가 음수인 걸 놓치고 \'작으면 사이, 크면 바깥\'만 썼을 수 있어요. 두 근 사이에 값을 하나 넣어 보게 하세요.'
       : '\'작으면 사이, 크면 바깥\'을 거꾸로 기억했을 수 있어요. 두 근 사이에 값을 하나 넣어 보게 하세요.';
   }
   function patternsHTML(c){
     const sol = solve(c);
     return '<table class="pat"><thead><tr><th>선택지</th><th>이 답을 고른 학생에게</th></tr></thead><tbody>' +
-      CHOICES.map((_, k) => '<tr' + (k === sol.key ? ' class="key"' : '') + '><td class="v">' + MARK[k] + ' ' + choiceStr(c, k, true) + '</td><td>' + choiceNote(c, k) + '</td></tr>').join('') +
+      CHOICES.map((_, k) => '<tr' + (k === sol.key ? ' class="key"' : '') + '><td class="v">' + MARK[k] + ' ' + M(choiceStr(c, k, true)) + '</td><td>' + choiceNote(c, k) + '</td></tr>').join('') +
       '</tbody></table>';
   }
 
   /* ---------- 그리기 ---------- */
   function renderCond(){
     const c = state.cond;
-    $('eqText').innerHTML = '<i>f</i>(<i>x</i>) = ' + factorStr(c, true) +
-      '<small>' + '문제 식: <span class="m">' + ineqStr(c, state.form, true) + '</span>' + '</small>';
+    $('eqText').innerHTML = M('f(x) = ' + factorStr(c, true)) +
+      '<small>문제 식: ' + M(ineqStr(c, state.form, true)) + '</small>';
     $('out-a').textContent = num(c.a);
     $('out-r').textContent = num(c.r);
     $('out-s').textContent = num(c.s);
@@ -823,7 +869,7 @@
       lab.className = 'choice';
       if (state.checked && k === sol.key) lab.classList.add('is-key');
       if (state.checked && k === state.pick && k !== sol.key) lab.classList.add('is-wrong');
-      lab.innerHTML = '<input type="radio" name="pick" value="' + k + '"' + (state.pick === k ? ' checked' : '') + '><span><b>' + MARK[k] + '</b>' + choiceStr(c, k, true) + '</span>';
+      lab.innerHTML = '<input type="radio" name="pick" value="' + k + '"' + (state.pick === k ? ' checked' : '') + '><span><b>' + MARK[k] + '</b>' + M(choiceStr(c, k, true)) + '</span>';
       box.appendChild(lab);
     });
     $('checkBtn').disabled = state.pick === null;
@@ -856,7 +902,7 @@
     $('nickTop').textContent = nick();
     $('nickFoot').textContent = nick();
   }
-  const setItem = p => problemHTML(p, p.form).replace(' 의 해를 고르세요.', '').replace('이차부등식 ', '');
+  const setItem = p => M(ineqStr(p, p.form, true));
   function renderSet(){
     const ul = $('setList');
     if (!state.set.length){
@@ -1026,19 +1072,24 @@
     '.app{max-width:680px;margin:0 auto;padding:12px 16px 40px}.top{background:linear-gradient(120deg,#3A55C7,#6C48B8);color:#fff;border-radius:20px;padding:18px 20px;margin-bottom:14px}' +
     '.top h1{font-size:23px;margin:4px 0 6px;line-height:1.3}.top p{margin:0;font-size:14px}.card{background:#fff;border:1px solid #E4E2F1;border-radius:18px;padding:16px;margin-bottom:12px}' +
     '.card h2{font-size:17px;margin:0 0 8px}.m{font-family:"Cambria Math","Times New Roman",serif;white-space:nowrap}i{font-family:"Cambria Math","Times New Roman",serif}sup{font-size:.68em;line-height:0}' +
+    'math{font-family:"Latin Modern Math","STIX Two Math","Cambria Math",math;font-size:1.12em}' +
     '.nl{display:block;width:100%;height:auto;border:1px solid #E4E2F1;border-radius:12px;background:#fff;margin:8px 0 4px}' +
     '.print{min-height:44px;padding:8px 16px;border-radius:12px;border:2px solid #E4E2F1;background:#fff;color:#33499E;font:inherit;font-weight:600;cursor:pointer}' +
     ':focus-visible{outline:3px solid #6C48B8;outline-offset:2px}' +
     '@media print{body{background:#fff}.print,.noprint{display:none!important}.card{border:1px solid #ccc;break-inside:avoid}.top{color:#1D1C33;background:none;border-bottom:2px solid #1D1C33;border-radius:0}}';
 
+  // 내보낸 파일의 수식은 MathML로 넣는다. 학생 기기가 인터넷에 못 붙어도 브라우저가 직접 그린다.
+  const studentHTML = () => withMathML(buildStudentHTML);
+  const teacherHTML = () => withMathML(buildTeacherHTML);
+
   // 학생용: 정답 표시·해설·교사 메모를 넣지 않는다. 아무것도 저장하거나 보내지 않는다.
-  function studentHTML(){
+  function buildStudentHTML(){
     const list = exportList();
     const SCRIPT_END = '<' + '/script>';
     const blank = lineSVG(list[0], true);
     const qHTML = list.map((p, i) =>
       '<fieldset class="card q"><legend><b>' + (i + 1) + '.</b> ' + problemHTML(p, p.form) + '</legend><div class="opts">' +
-      CHOICES.map((_, k) => '<label class="opt"><input type="radio" name="q' + i + '" value="' + k + '"><span><b>' + MARK[k] + '</b>' + choiceStr(p, k, true) + '</span></label>').join('') +
+      CHOICES.map((_, k) => '<label class="opt"><input type="radio" name="q' + i + '" value="' + k + '"><span><b>' + MARK[k] + '</b>' + M(choiceStr(p, k, true)) + '</span></label>').join('') +
       '</div><p class="lab">수직선에 해를 그려 보세요 <small style="font-weight:400;color:#514E72">(인쇄해서 쓰거나 공책에 따라 그려요)</small></p>' + blank +
       '<label class="lab" for="r' + i + '">고른 이유 (한 줄)</label><textarea id="r' + i + '" rows="2" maxlength="200"></textarea></fieldset>'
     ).join('\n');
@@ -1051,8 +1102,8 @@
       '.q{margin:0 0 12px;min-width:0}.q legend{float:left;width:100%;font-weight:400;padding:0;margin:0 0 4px;font-size:16px}.q legend .m{font-size:19px}.q legend+*{clear:both}' +
       '.opts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0}@media(max-width:520px){.opts{grid-template-columns:1fr}}' +
       '.opt{position:relative}.opt input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}' +
-      '.opt span{display:flex;gap:10px;align-items:center;min-height:50px;padding:8px 12px;border:2px solid #E4E2F1;border-radius:12px;font-family:"Cambria Math","Times New Roman",serif;font-size:18px}' +
-      '.opt span b{font-family:sans-serif;font-size:14px;color:#514E72}.opt input:checked+span{border-color:#6C48B8;background:#EFE8FA;color:#5B3E9E;font-weight:700}' +
+      '.opt input+span{display:flex;gap:10px;align-items:center;min-height:50px;padding:8px 12px;border:2px solid #E4E2F1;border-radius:12px;font-family:"Cambria Math","Times New Roman",serif;font-size:18px}' +
+      '.opt input+span>b{font-family:sans-serif;font-size:14px;color:#514E72}.opt input:checked+span{border-color:#6C48B8;background:#EFE8FA;color:#5B3E9E;font-weight:700}' +
       '.opt input:focus-visible+span{outline:3px solid #6C48B8;outline-offset:2px}.lab{display:block;font-weight:600;font-size:14.5px;margin:10px 0 4px}' +
       '.btn{min-height:48px;padding:10px 18px;border-radius:14px;border:0;background:#33499E;color:#fff;font:inherit;font-weight:600;cursor:pointer;width:100%;margin-top:6px}' +
       '.out{margin-top:10px}.out textarea{font-family:ui-monospace,Consolas,monospace;font-size:13px;min-height:130px}.hint{font-size:14px;color:#514E72;margin:6px 0 0}' +
@@ -1093,13 +1144,13 @@
   }
 
   // 교사용: 문제마다 정답, 수직선, 값을 넣은 검산, 선택지별로 볼 점, 교사 메모
-  function teacherHTML(){
+  function buildTeacherHTML(){
     const list = exportList();
     const memo = state.memo.trim();
     const blocks = list.map((p, i) => {
       const sol = solve(p);
       return '<section class="card"><h2>' + (i + 1) + '번 · ' + problemHTML(p, p.form) + '</h2>' +
-        '<p><b>정답</b> <span class="answer">' + MARK[sol.key] + ' ' + choiceStr(p, sol.key, true) + '</span></p>' +
+        '<p><b>정답</b> <span class="answer">' + MARK[sol.key] + ' ' + M(choiceStr(p, sol.key, true)) + '</span></p>' +
         explainHTML(p, p.form) +
         '<h3>선택지별로 볼 점</h3>' + patternsHTML(p) + '</section>';
     }).join('\n');
@@ -1198,6 +1249,12 @@
   $('guideIn').value = state.guide;
   $('memo').value = state.memo;
   renderAll();
+  // KaTeX는 defer로 이 스크립트보다 늦게 오므로, 도착하면 수식을 다시 그린다
+  if (window.katex) renderStatic();
+  else {
+    const kj = $('katexJs');
+    if (kj) kj.addEventListener('load', () => { renderStatic(); renderAll(); });
+  }
 })();
 </script>
 </body>
